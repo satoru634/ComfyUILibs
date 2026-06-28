@@ -105,9 +105,13 @@ namespace ComfyUILibs.Services
                         return;
                     continue;
                 }
-                catch (WebSocketException ex)
+                catch (WebSocketException)
                 {
-                    throw new ComfyUIException($"WebSocket 接続エラー: {ex.Message}", ex);
+                    // サーバー側が接続を突然切断した場合（Close フレームなし）は
+                    // Python 版の StopAsyncIteration 相当として扱い、完了済みならエラーにしない
+                    if (await IsCompletedAsync(promptId))
+                        return;
+                    break;
                 }
 
                 // ComfyUI はプレビュー画像をバイナリフレームで送信するためスキップする
@@ -125,7 +129,9 @@ namespace ComfyUILibs.Services
                 if (msgData?["prompt_id"]?.GetValue<string>() != promptId)
                     continue;
 
-                if (msgType == "execution_complete")
+                // 新旧 ComfyUI の完了イベントを両方受け付ける
+                // execution_success: 新しい ComfyUI、execution_complete: 旧 ComfyUI
+                if (msgType == "execution_complete" || msgType == "execution_success")
                     return;
 
                 if (msgType == "execution_error")
