@@ -42,6 +42,9 @@ namespace ComfyUILibsTests.Services
 
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
             => Task.FromResult(new List<OutputFile>());
+
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
     }
 
     public class Wd14TaggerRunnerTests : IDisposable
@@ -201,6 +204,8 @@ namespace ComfyUILibsTests.Services
             => Task.FromResult(JsonDocument.Parse("{}").RootElement);
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
             => Task.FromResult(new List<OutputFile>());
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
     }
 
     /// <summary>History に text がないテスト用クライアント</summary>
@@ -215,5 +220,7 @@ namespace ComfyUILibsTests.Services
             => Task.FromResult(JsonDocument.Parse("""{"outputs":{"3":{}}}""").RootElement.Clone());
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
             => Task.FromResult(new List<OutputFile>());
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
     }
 }
