@@ -179,5 +179,54 @@ namespace ComfyUILibsTests.Services
 
             Assert.Equal(2, outputs.Count);
         }
+
+        // ── GetImageAsync ─────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task GetImageAsync_ValidResponse_ReturnsBytes()
+        {
+            var expectedBytes = new byte[] { 1, 2, 3, 4 };
+            HttpRequestMessage? capturedRequest = null;
+            var http = FakeHttpClientFactory.Create(req =>
+            {
+                capturedRequest = req;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(expectedBytes)
+                };
+            });
+            var client = new ComfyUIClient(BaseUrl, http);
+
+            var bytes = await client.GetImageAsync("ComfyUI_00001_.png", "sub folder", "output");
+
+            Assert.Equal(expectedBytes, bytes);
+            Assert.NotNull(capturedRequest);
+            var requestUri = capturedRequest!.RequestUri!.AbsoluteUri;
+            Assert.StartsWith($"{BaseUrl}/view?", requestUri);
+            Assert.Contains("filename=ComfyUI_00001_.png", requestUri);
+            Assert.Contains("subfolder=sub%20folder", requestUri);
+            Assert.Contains("type=output", requestUri);
+        }
+
+        [Fact]
+        public async Task GetImageAsync_HttpError_ThrowsComfyUIException()
+        {
+            var http = FakeHttpClientFactory.Create(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+            var client = new ComfyUIClient(BaseUrl, http);
+
+            await Assert.ThrowsAsync<ComfyUIException>(() =>
+                client.GetImageAsync("missing.png", "", "output"));
+        }
+
+        [Fact]
+        public async Task GetImageAsync_ConnectionRefused_ThrowsComfyUIException()
+        {
+            var http = new HttpClient(new FakeHttpMessageHandler(_ =>
+                throw new HttpRequestException("Connection refused")));
+            var client = new ComfyUIClient(BaseUrl, http);
+
+            await Assert.ThrowsAsync<ComfyUIException>(() =>
+                client.GetImageAsync("a.png", "", "output"));
+        }
     }
 }

@@ -31,6 +31,9 @@ namespace ComfyUILibsTests.Services
 
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
             => Task.FromResult(Outputs);
+
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
     }
 
     public class WorkflowRunnerTests : IDisposable
