@@ -25,6 +25,16 @@ namespace ComfyUILibs.Services
         private readonly WorkflowBuilder? _builderOverride;
 
         /// <summary>
+        /// <see cref="ComfyUIClient.MonitorAsync"/> が完了を検知した直後は、ComfyUI 側の
+        /// history への反映がわずかに遅延し <c>GetOutputsAsync</c> が空リストを返すことがあるため、
+        /// 空だった場合にリトライする回数。
+        /// </summary>
+        private const int MaxOutputsRetryCount = 3;
+
+        /// <summary>outputs 取得リトライの間隔。</summary>
+        private static readonly TimeSpan OutputsRetryDelay = TimeSpan.FromMilliseconds(300);
+
+        /// <summary>
         /// 直前の <see cref="ExecuteAsync"/> で使用したテンプレートファイルのパス。
         /// <see cref="RunAsync"/> が result.json に書き込む際に参照する。
         /// </summary>
@@ -138,6 +148,13 @@ namespace ComfyUILibs.Services
             var promptId = await client.SubmitAsync(builtWorkflow, clientId);
             await client.MonitorAsync(promptId, clientId);
             var outputs = await client.GetOutputsAsync(promptId);
+
+            // 完了検知直後は history 反映が間に合わず空リストになることがあるためリトライする
+            for (int attempt = 0; outputs.Count == 0 && attempt < MaxOutputsRetryCount; attempt++)
+            {
+                await Task.Delay(OutputsRetryDelay);
+                outputs = await client.GetOutputsAsync(promptId);
+            }
 
             // 成功時のみ状態を更新する（例外が発生すると到達しないため、失敗時は null のまま）
             TemplatePath = templatePath;

@@ -120,6 +120,8 @@ var imageSize = new ImageSize { Width = 832, Height = 1216 };
 
 var outputs = await runner.ExecuteAsync(loras, prompts, imageSize);
 // outputs: ComfyUI が生成したファイルのリスト（OutputFile）
+// 完了検知直後に ComfyUI 側の history 反映が間に合わず空リストが返ることがあるため、
+// 空だった場合は 300ms 間隔で最大 3 回まで自動リトライする
 
 // 実行後のメタ情報
 Console.WriteLine(runner.PromptId);    // ComfyUI の prompt_id
@@ -215,11 +217,11 @@ dotnet test ComfyUILibs.sln
 | `Services/ConfigLoaderTests.cs` | 38 | 正常系・異常系のバリデーション |
 | `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
 | `Services/WorkflowBuilderTests.cs` | 14 | テンプレート選択・適用 |
-| `Services/WorkflowRunnerTests.cs` | 9 | FakeComfyUIClient によるモック |
+| `Services/WorkflowRunnerTests.cs` | 11 | FakeComfyUIClient によるモック（outputs 空リトライを含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 5 | タグ取得フロー |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 
-合計: **151 件**
+合計: **153 件**
 
 ---
 

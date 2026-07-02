@@ -14,6 +14,10 @@ namespace ComfyUILibsTests.Services
         public List<OutputFile> Outputs { get; set; } = new();
         public Exception? ThrowOnSubmit { get; set; }
 
+        /// <summary>設定した場合、GetOutputsAsync の呼び出し順にこのキューから結果を返す（リトライ挙動のテスト用）。</summary>
+        public Queue<List<OutputFile>>? OutputsSequence { get; set; }
+        public int GetOutputsCallCount { get; private set; }
+
         public Task<string> SubmitAsync(JsonObject workflow, string clientId)
         {
             if (ThrowOnSubmit != null)
@@ -30,7 +34,12 @@ namespace ComfyUILibsTests.Services
             => Task.FromResult(JsonDocument.Parse("{}").RootElement);
 
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
-            => Task.FromResult(Outputs);
+        {
+            GetOutputsCallCount++;
+            if (OutputsSequence != null && OutputsSequence.Count > 0)
+                return Task.FromResult(OutputsSequence.Dequeue());
+            return Task.FromResult(Outputs);
+        }
 
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
             => Task.FromResult(Array.Empty<byte>());
@@ -205,6 +214,46 @@ namespace ComfyUILibsTests.Services
 
             Assert.NotNull(runner.Parameters);
             Assert.Equal("pos text", runner.Parameters!.Positive);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_EmptyOutputsOnFirstCall_RetriesAndReturnsResult()
+        {
+            var fakeClient = new FakeComfyUIClient
+            {
+                OutputsSequence = new Queue<List<OutputFile>>(new[]
+                {
+                    new List<OutputFile>(),
+                    new List<OutputFile>
+                    {
+                        new OutputFile { Filename = "retried.png", Type = "output" }
+                    }
+                })
+            };
+            var runner = CreateRunner(fakeClient);
+
+            var outputs = await runner.ExecuteAsync(
+                new List<string>(),
+                new PromptPair { Positive = "pos", Negative = "neg" });
+
+            Assert.Single(outputs);
+            Assert.Equal("retried.png", outputs[0].Filename);
+            Assert.Equal(2, fakeClient.GetOutputsCallCount);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_AlwaysEmptyOutputs_GivesUpAfterMaxRetries()
+        {
+            var fakeClient = new FakeComfyUIClient { Outputs = new List<OutputFile>() };
+            var runner = CreateRunner(fakeClient);
+
+            var outputs = await runner.ExecuteAsync(
+                new List<string>(),
+                new PromptPair { Positive = "pos", Negative = "neg" });
+
+            Assert.Empty(outputs);
+            // 初回 + リトライ3回 = 4回
+            Assert.Equal(4, fakeClient.GetOutputsCallCount);
         }
 
         // ── RunAsync ──────────────────────────────────────────────────────────
