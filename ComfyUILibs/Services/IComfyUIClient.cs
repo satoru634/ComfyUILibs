@@ -55,5 +55,16 @@ namespace ComfyUILibs.Services
         /// <returns>出力ファイルのリスト。生成物がない場合は空リスト。</returns>
         /// <exception cref="Exceptions.ComfyUIException">接続失敗・HTTP エラー時に送出。</exception>
         Task<List<OutputFile>> GetOutputsAsync(string promptId);
+
+        /// <summary>
+        /// GET /view で出力ファイルの実体（画像バイト列）を取得する。
+        /// プレビュー表示用に <see cref="OutputFile"/> の情報からファイル本体を取得する際に使用する。
+        /// </summary>
+        /// <param name="filename">取得対象のファイル名。</param>
+        /// <param name="subfolder">出力先のサブフォルダ名。ルート出力フォルダの場合は空文字。</param>
+        /// <param name="type">ファイルの種別（例: "output"）。</param>
+        /// <returns>ファイルのバイト列。</returns>
+        /// <exception cref="Exceptions.ComfyUIException">接続失敗・HTTP エラー時に送出。</exception>
+        Task<byte[]> GetImageAsync(string filename, string subfolder, string type);
     }
 }

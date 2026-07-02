@@ -16,6 +16,7 @@ This is a C# port of the Python implementation from [comfyui_tools](https://gith
 | Selects templates and applies prompts / LoRA / image size | `WorkflowBuilder` |
 | ComfyUI REST API and WebSocket client | `ComfyUIClient` |
 | Runs WD14 Tagger workflows | `Wd14TaggerRunner` |
+| Manages the local cache of generated image previews | `PreviewImageCacheService` |
 | Persists settings to JSON files | `Setting<T>` |
 
 ---
@@ -49,11 +50,13 @@ ComfyUILibs/
     ResolvedLora.cs           # Resolved LoRA entry
   Services/
     IComfyUIClient.cs         # ComfyUIClient interface (for DI / testing)
-    ComfyUIClient.cs          # ComfyUI REST API + WebSocket client
+    ComfyUIClient.cs          # ComfyUI REST API + WebSocket client (includes image fetch via GET /view)
     ConfigLoader.cs           # config.json loading and validation
     WorkflowBuilder.cs        # Template selection and patching
     WorkflowRunner.cs         # Workflow execution facade
     Wd14TaggerRunner.cs       # WD14 Tagger workflow execution
+    IPreviewImageCacheService.cs # Preview image cache interface (for DI / testing)
+    PreviewImageCacheService.cs  # Local cache management for generated image previews
   doc/
     README_english.md         # This file
 ```
@@ -153,6 +156,19 @@ var tags = await tagger.TagAsync(imageData);
 // tags: "1girl, solo, smile, ..."
 ```
 
+### Fetching a Cached Preview Image
+
+```csharp
+// PreviewImageCacheService — fetches an image via GET /view and caches it locally
+var cacheService = new PreviewImageCacheService();
+var client = new ComfyUIClient("http://127.0.0.1:8188");
+
+// Returns the cached file if present; otherwise fetches from ComfyUI and caches it.
+// Returns null (never throws) if the file isn't an image or the fetch fails.
+string? cachedPath = await cacheService.GetOrFetchAsync(
+    client, promptId: "abc-123", output: outputFile, cacheDirectory: "preview_cache");
+```
+
 ### Settings Persistence
 
 ```csharp
@@ -197,12 +213,13 @@ dotnet test ComfyUILibs.sln
 | `Common/SettingTests.cs` | 9 | Settings persistence and loading |
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException construction and inheritance |
 | `Services/ConfigLoaderTests.cs` | 38 | Validation — happy path and error cases |
-| `Services/ComfyUIClientTests.cs` | 9 | Mocked with FakeHttpMessageHandler |
+| `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
 | `Services/WorkflowBuilderTests.cs` | 14 | Template selection and patching |
 | `Services/WorkflowRunnerTests.cs` | 9 | Mocked with FakeComfyUIClient |
 | `Services/Wd14TaggerRunnerTests.cs` | 5 | Tag extraction flow |
+| `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 
-Total: **120 tests**
+Total: **151 tests**
 
 ---
 

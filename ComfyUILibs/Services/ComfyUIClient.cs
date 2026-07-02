@@ -268,6 +268,19 @@ namespace ComfyUILibs.Services
             return outputs;
         }
 
+        // ── 画像取得 ──────────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        public async Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+        {
+            var query = $"filename={Uri.EscapeDataString(filename)}" +
+                $"&subfolder={Uri.EscapeDataString(subfolder)}" +
+                $"&type={Uri.EscapeDataString(type)}";
+
+            var response = await SendAsync(() => _httpClient.GetAsync($"{_url}/view?{query}"));
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
         // ── HTTP ヘルパー ─────────────────────────────────────────────────
 
         /// <summary>
