@@ -31,10 +31,10 @@ namespace ComfyUILibs.Services
         private readonly Dictionary<string, string> _titleToId;
 
         /// <summary>
-        /// 本番用コンストラクター。config.json を読み込んで初期化する。
+        /// 本番用コンストラクター。workflow_config.json を読み込んで初期化する。
         /// </summary>
-        /// <param name="configPath">config.json のパス（省略時は実行ディレクトリの config.json）。</param>
-        public Wd14TaggerRunner(string configPath = "config.json")
+        /// <param name="configPath">workflow_config.json のパス（省略時は実行ディレクトリの workflow_config.json）。</param>
+        public Wd14TaggerRunner(string configPath = "workflow_config.json")
             : this(ConfigLoader.LoadTaggerConfig(configPath), null)
         {
         }

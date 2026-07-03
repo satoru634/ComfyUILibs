@@ -20,7 +20,7 @@ namespace ComfyUILibs.Models
     /// </summary>
     public class WorkflowInput
     {
-        /// <summary>使用する LoRA の論理名リスト（最大 4 件）。config.json の loras キーと一致していること。</summary>
+        /// <summary>使用する LoRA の論理名リスト（最大 4 件）。workflow_config.json の loras キーと一致していること。</summary>
         [JsonPropertyName("loras")]
         public List<string> Loras { get; set; } = new();
 

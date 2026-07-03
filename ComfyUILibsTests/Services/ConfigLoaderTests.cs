@@ -80,7 +80,7 @@ namespace ComfyUILibsTests.Services
         [Fact]
         public void LoadConfig_ValidFile_ReturnsWorkflowConfig()
         {
-            var path = WriteTempFile("config.json", ValidConfigJson());
+            var path = WriteTempFile("workflow_config.json", ValidConfigJson());
 
             var config = ConfigLoader.LoadConfig(path);
 
@@ -111,7 +111,7 @@ namespace ComfyUILibsTests.Services
         public void LoadConfig_MissingComfyuiUrl_ThrowsComfyUIException()
         {
             var json = """{"default_workflow":"sdxl","workflows":{}}""";
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("comfyui_url", ex.Message);
@@ -121,7 +121,7 @@ namespace ComfyUILibsTests.Services
         public void LoadConfig_MissingDefaultWorkflow_ThrowsComfyUIException()
         {
             var json = """{"comfyui_url":"http://localhost","workflows":{}}""";
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("default_workflow", ex.Message);
@@ -131,7 +131,7 @@ namespace ComfyUILibsTests.Services
         public void LoadConfig_MissingWorkflows_ThrowsComfyUIException()
         {
             var json = """{"comfyui_url":"http://localhost","default_workflow":"sdxl"}""";
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("workflows", ex.Message);
@@ -140,7 +140,7 @@ namespace ComfyUILibsTests.Services
         [Fact]
         public void LoadConfig_DefaultWorkflowNotInWorkflows_ThrowsComfyUIException()
         {
-            var path = WriteTempFile("config.json", ValidConfigJson(defaultWorkflow: "nonexistent"));
+            var path = WriteTempFile("workflow_config.json", ValidConfigJson(defaultWorkflow: "nonexistent"));
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("nonexistent", ex.Message);
@@ -166,7 +166,7 @@ namespace ComfyUILibsTests.Services
                   }
                 }
                 """;
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
         }
@@ -190,7 +190,7 @@ namespace ComfyUILibsTests.Services
                   }
                 }
                 """;
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("square", ex.Message);
@@ -218,7 +218,7 @@ namespace ComfyUILibsTests.Services
                   }
                 }
                 """;
-            var path = WriteTempFile("config.json", json);
+            var path = WriteTempFile("workflow_config.json", json);
 
             var ex = Assert.Throws<ComfyUIException>(() => ConfigLoader.LoadConfig(path));
             Assert.Contains("file", ex.Message);

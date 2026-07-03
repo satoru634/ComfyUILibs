@@ -12,7 +12,7 @@ This is a C# port of the Python implementation from [comfyui_tools](https://gith
 | Feature | Class |
 |---|---|
 | Orchestrates the full workflow execution pipeline | `WorkflowRunner` |
-| Loads and validates config.json | `ConfigLoader` |
+| Loads and validates workflow_config.json | `ConfigLoader` |
 | Selects templates and applies prompts / LoRA / image size | `WorkflowBuilder` |
 | ComfyUI REST API and WebSocket client | `ComfyUIClient` |
 | Runs WD14 Tagger workflows | `Wd14TaggerRunner` |
@@ -44,14 +44,14 @@ ComfyUILibs/
   Exceptions/
     ComfyUIException.cs       # Base exception class
   Models/
-    WorkflowConfig.cs         # config.json model
+    WorkflowConfig.cs         # workflow_config.json model
     WorkflowInput.cs          # Input JSON model
     WorkflowResult.cs         # Execution result model
     ResolvedLora.cs           # Resolved LoRA entry
   Services/
     IComfyUIClient.cs         # ComfyUIClient interface (for DI / testing)
     ComfyUIClient.cs          # ComfyUI REST API + WebSocket client (includes image fetch via GET /view)
-    ConfigLoader.cs           # config.json loading and validation
+    ConfigLoader.cs           # workflow_config.json loading and validation
     WorkflowBuilder.cs        # Template selection and patching
     WorkflowRunner.cs         # Workflow execution facade
     Wd14TaggerRunner.cs       # WD14 Tagger workflow execution
@@ -63,7 +63,7 @@ ComfyUILibs/
 
 ---
 
-## config.json
+## workflow_config.json
 
 The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
 
@@ -112,7 +112,7 @@ The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
 
 ```csharp
 // WorkflowRunner — facade that orchestrates the full execution pipeline
-var runner = new WorkflowRunner("config.json", "sdxl");
+var runner = new WorkflowRunner("workflow_config.json", "sdxl");
 
 var loras = new List<string> { "my_lora" };
 var prompts = new PromptPair { Positive = "1girl, solo", Negative = "bad quality" };
@@ -132,7 +132,7 @@ Console.WriteLine(runner.TemplatePath); // path to the template that was used
 
 ```csharp
 // Reads input.json and writes the result to result.json
-var runner = new WorkflowRunner("config.json", "sdxl");
+var runner = new WorkflowRunner("workflow_config.json", "sdxl");
 await runner.RunAsync("input.json", "result.json");
 ```
 
@@ -152,7 +152,7 @@ await runner.RunAsync("input.json", "result.json");
 ### WD14 Tagger
 
 ```csharp
-var tagger = new Wd14TaggerRunner("config.json");
+var tagger = new Wd14TaggerRunner("workflow_config.json");
 var imageData = File.ReadAllBytes("input.png");
 var tags = await tagger.TagAsync(imageData);
 // tags: "1girl, solo, smile, ..."

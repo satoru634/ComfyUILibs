@@ -53,12 +53,12 @@ namespace ComfyUILibs.Services
         public WorkflowParameters? Parameters { get; private set; }
 
         /// <summary>
-        /// 本番用コンストラクター。config.json を読み込んで初期化する。
+        /// 本番用コンストラクター。workflow_config.json を読み込んで初期化する。
         /// templates ディレクトリは実行ファイルと同階層の <c>templates/</c> を使用する。
         /// </summary>
-        /// <param name="configPath">config.json のパス（省略時は実行ディレクトリの config.json）。</param>
+        /// <param name="configPath">workflow_config.json のパス（省略時は実行ディレクトリの workflow_config.json）。</param>
         /// <param name="workflowName">使用するワークフロー名。null の場合は default_workflow を使用する。</param>
-        public WorkflowRunner(string configPath = "config.json", string? workflowName = null)
+        public WorkflowRunner(string configPath = "workflow_config.json", string? workflowName = null)
             : this(ConfigLoader.LoadConfig(configPath), workflowName,
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates"),
                 null, null)
@@ -90,14 +90,14 @@ namespace ComfyUILibs.Services
             _workflowName = workflowName ?? _config.DefaultWorkflow!;
             if (!_config.Workflows!.ContainsKey(_workflowName))
                 throw new ComfyUIException(
-                    $"ワークフロー '{_workflowName}' が config.json の workflows に存在しません");
+                    $"ワークフロー '{_workflowName}' が workflow_config.json の workflows に存在しません");
 
             _workflowSettings = _config.Workflows[_workflowName];
         }
 
         /// <summary>
         /// 指定した向き（"vertical"/"horizontal"/"square"）に対応する画像サイズを返す。
-        /// GUI の向き選択 UI と config.json の image_size を橋渡しするメソッド。
+        /// GUI の向き選択 UI と workflow_config.json の image_size を橋渡しするメソッド。
         /// </summary>
         /// <param name="orientation">向き文字列（"vertical"・"horizontal"・"square"）。</param>
         /// <returns>対応する <see cref="ImageSize"/>。</returns>
@@ -108,7 +108,7 @@ namespace ComfyUILibs.Services
         /// LoRA・プロンプト・画像サイズを受け取り、ComfyUI にワークフローを送信して生成物のリストを返す。
         /// 実行後は <see cref="TemplatePath"/>・<see cref="PromptId"/>・<see cref="Parameters"/> が更新される。
         /// </summary>
-        /// <param name="loras">LoRA 論理名のリスト（最大 4 件、config.json のキーと一致すること）。</param>
+        /// <param name="loras">LoRA 論理名のリスト（最大 4 件、workflow_config.json のキーと一致すること）。</param>
         /// <param name="prompts">正・負プロンプトのペア。</param>
         /// <param name="imageSize">画像サイズ。null の場合はワークフローの default_image_size を使用する。</param>
         /// <returns>生成された出力ファイルのリスト。</returns>
@@ -202,10 +202,10 @@ namespace ComfyUILibs.Services
         }
 
         /// <summary>
-        /// LoRA 論理名リストを config.json の設定に基づいて <see cref="ResolvedLora"/> リストに変換する。
+        /// LoRA 論理名リストを workflow_config.json の設定に基づいて <see cref="ResolvedLora"/> リストに変換する。
         /// </summary>
         /// <param name="loraNames">LoRA 論理名のリスト。</param>
-        /// <param name="loraList">config.json の loras 辞書。</param>
+        /// <param name="loraList">workflow_config.json の loras 辞書。</param>
         /// <returns>解決済み LoRA エントリのリスト。</returns>
         /// <exception cref="ComfyUIException">loras にキーが存在しない LoRA 名が指定された場合。</exception>
         private static List<ResolvedLora> ResolveLoras(
@@ -217,7 +217,7 @@ namespace ComfyUILibs.Services
             {
                 if (!loraList.TryGetValue(name, out var entry))
                     throw new ComfyUIException(
-                        $"LoRA '{name}' が config.json の loras 設定に存在しません");
+                        $"LoRA '{name}' が workflow_config.json の loras 設定に存在しません");
                 resolved.Add(new ResolvedLora
                 {
                     Name = name,

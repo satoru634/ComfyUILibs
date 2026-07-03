@@ -7,7 +7,7 @@ using ComfyUILibs.Models;
 namespace ComfyUILibs.Services
 {
     /// <summary>
-    /// config.json および入力 JSON の読み込みとバリデーションを担う静的クラス。
+    /// workflow_config.json および入力 JSON の読み込みとバリデーションを担う静的クラス。
     /// Python 版の load_files.py を移植したもの。
     /// </summary>
     public static class ConfigLoader
@@ -21,7 +21,7 @@ namespace ComfyUILibs.Services
         /// <summary>画像サイズの最大値（ピクセル）。</summary>
         public const int ImageSizeMax = 2048;
 
-        /// <summary>image_size に必須の向き名。config.json の image_size キーとして要求される。</summary>
+        /// <summary>image_size に必須の向き名。workflow_config.json の image_size キーとして要求される。</summary>
         private static readonly string[] ImageSizeOrientations = { "vertical", "horizontal", "square" };
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace ComfyUILibs.Services
 
         // ── LoRA エントリバリデーション ───────────────────────────────────────
 
-        /// <summary>config.json の loras セクション（名前 → エントリの辞書）を検証する。</summary>
+        /// <summary>workflow_config.json の loras セクション（名前 → エントリの辞書）を検証する。</summary>
         /// <exception cref="ComfyUIException">file が空文字、または strength が null（キー欠落）の場合。</exception>
         private static void ValidateLoraEntries(Dictionary<string, LoraEntry> loras)
         {
@@ -68,18 +68,18 @@ namespace ComfyUILibs.Services
             {
                 if (string.IsNullOrWhiteSpace(entry.File))
                     throw new ComfyUIException(
-                        $"config.json loras['{name}'].file は空でない文字列である必要があります");
+                        $"workflow_config.json loras['{name}'].file は空でない文字列である必要があります");
                 // strength が null = JSON にキーが存在しない（デシリアライズ時のデフォルト 0.0 と区別）
                 if (entry.Strength == null)
                     throw new ComfyUIException(
-                        $"config.json loras['{name}'].strength は数値である必要があります");
+                        $"workflow_config.json loras['{name}'].strength は数値である必要があります");
             }
         }
 
         // ── ワークフロー設定バリデーション ────────────────────────────────────
 
         /// <summary>
-        /// config.json の workflows[name].image_size を検証する。
+        /// workflow_config.json の workflows[name].image_size を検証する。
         /// "vertical"・"horizontal"・"square" の 3 キーがすべて存在し、値が有効な画像サイズであること。
         /// </summary>
         private static void ValidateWorkflowImageSize(string workflowName, Dictionary<string, ImageSize> imageSizeMap)
@@ -88,7 +88,7 @@ namespace ComfyUILibs.Services
             {
                 if (!imageSizeMap.TryGetValue(orientation, out var size))
                     throw new ComfyUIException(
-                        $"config.json の 'workflows.{workflowName}.image_size' に '{orientation}' キーがありません");
+                        $"workflow_config.json の 'workflows.{workflowName}.image_size' に '{orientation}' キーがありません");
                 try
                 {
                     ValidateImageSize(size);
@@ -97,17 +97,17 @@ namespace ComfyUILibs.Services
                 {
                     // 元の例外をラップして、どのワークフロー・向きで失敗したかを明示する
                     throw new ComfyUIException(
-                        $"config.json の workflows.{workflowName}.image_size.{orientation} が不正です: {ex.Message}", ex);
+                        $"workflow_config.json の workflows.{workflowName}.image_size.{orientation} が不正です: {ex.Message}", ex);
                 }
             }
         }
 
-        /// <summary>config.json の workflows[name] エントリを検証する。</summary>
+        /// <summary>workflow_config.json の workflows[name] エントリを検証する。</summary>
         private static void ValidateWorkflowEntry(string name, WorkflowSettings entry)
         {
             if (entry.DefaultImageSize == null)
                 throw new ComfyUIException(
-                    $"config.json の 'workflows.{name}' に 'default_image_size' キーがありません");
+                    $"workflow_config.json の 'workflows.{name}' に 'default_image_size' キーがありません");
             try
             {
                 ValidateImageSize(entry.DefaultImageSize);
@@ -115,17 +115,17 @@ namespace ComfyUILibs.Services
             catch (ComfyUIException ex)
             {
                 throw new ComfyUIException(
-                    $"config.json の workflows.{name}.default_image_size が不正です: {ex.Message}", ex);
+                    $"workflow_config.json の workflows.{name}.default_image_size が不正です: {ex.Message}", ex);
             }
 
             if (entry.ImageSize == null)
                 throw new ComfyUIException(
-                    $"config.json の 'workflows.{name}' に 'image_size' キーがありません");
+                    $"workflow_config.json の 'workflows.{name}' に 'image_size' キーがありません");
             ValidateWorkflowImageSize(name, entry.ImageSize);
 
             if (entry.Loras == null)
                 throw new ComfyUIException(
-                    $"config.json の 'workflows.{name}' に 'loras' キーがありません");
+                    $"workflow_config.json の 'workflows.{name}' に 'loras' キーがありません");
             ValidateLoraEntries(entry.Loras);
         }
 
@@ -140,12 +140,12 @@ namespace ComfyUILibs.Services
         public static void ValidateWd14TaggerConfig(WorkflowConfig config)
         {
             if (config.Wd14Tagger == null)
-                throw new ComfyUIException("config.json に 'wd14_tagger' キーがありません");
+                throw new ComfyUIException("workflow_config.json に 'wd14_tagger' キーがありません");
 
             var wd14 = config.Wd14Tagger;
             if (string.IsNullOrWhiteSpace(wd14.ModelName))
                 throw new ComfyUIException(
-                    "config.json の 'wd14_tagger.model_name' は空でない文字列である必要があります");
+                    "workflow_config.json の 'wd14_tagger.model_name' は空でない文字列である必要があります");
 
             ValidateWd14Threshold("general_threshold", wd14.GeneralThreshold);
             ValidateWd14Threshold("character_threshold", wd14.CharacterThreshold);
@@ -155,19 +155,19 @@ namespace ComfyUILibs.Services
         private static void ValidateWd14Threshold(string key, double? val)
         {
             if (val == null)
-                throw new ComfyUIException($"config.json に 'wd14_tagger.{key}' キーがありません");
+                throw new ComfyUIException($"workflow_config.json に 'wd14_tagger.{key}' キーがありません");
             if (val < 0.0 || val > 1.0)
                 throw new ComfyUIException(
-                    $"config.json の 'wd14_tagger.{key}' は 0.0〜1.0 の範囲で指定してください（指定値: {val}）");
+                    $"workflow_config.json の 'wd14_tagger.{key}' は 0.0〜1.0 の範囲で指定してください（指定値: {val}）");
         }
 
-        // ── config.json ロード ────────────────────────────────────────────────
+        // ── workflow_config.json ロード ────────────────────────────────────────────────
 
         /// <summary>
-        /// WD14 Tagger 専用の config.json を読み込む。comfyui_url のみ必須とし、
+        /// WD14 Tagger 専用の workflow_config.json を読み込む。comfyui_url のみ必須とし、
         /// workflows などのワークフロー設定は検証しない。
         /// </summary>
-        /// <param name="configPath">config.json のパス。</param>
+        /// <param name="configPath">workflow_config.json のパス。</param>
         /// <returns>読み込んだ設定オブジェクト。</returns>
         /// <exception cref="ComfyUIException">ファイル欠落・JSON 不正・comfyui_url 欠落の場合。</exception>
         public static WorkflowConfig LoadTaggerConfig(string configPath)
@@ -177,16 +177,16 @@ namespace ComfyUILibs.Services
             if (string.IsNullOrWhiteSpace(config.ComfyuiUrl))
                 throw new ComfyUIException(
                     config.ComfyuiUrl == null
-                        ? "config.json に 'comfyui_url' キーがありません"
+                        ? "workflow_config.json に 'comfyui_url' キーがありません"
                         : "'comfyui_url' は空でない文字列である必要があります");
 
             return config;
         }
 
         /// <summary>
-        /// config.json を読み込み、すべての必須フィールドとワークフロー設定を検証する。
+        /// workflow_config.json を読み込み、すべての必須フィールドとワークフロー設定を検証する。
         /// </summary>
-        /// <param name="configPath">config.json のパス。</param>
+        /// <param name="configPath">workflow_config.json のパス。</param>
         /// <returns>検証済みの設定オブジェクト。</returns>
         /// <exception cref="ComfyUIException">ファイル欠落・JSON 不正・必須フィールド欠落・値が不正な場合。</exception>
         public static WorkflowConfig LoadConfig(string configPath)
@@ -196,17 +196,17 @@ namespace ComfyUILibs.Services
             if (string.IsNullOrWhiteSpace(config.ComfyuiUrl))
                 throw new ComfyUIException(
                     config.ComfyuiUrl == null
-                        ? "config.json に 'comfyui_url' キーがありません"
+                        ? "workflow_config.json に 'comfyui_url' キーがありません"
                         : "'comfyui_url' は空でない文字列である必要があります");
 
             if (string.IsNullOrWhiteSpace(config.DefaultWorkflow))
                 throw new ComfyUIException(
                     config.DefaultWorkflow == null
-                        ? "config.json に 'default_workflow' キーがありません"
+                        ? "workflow_config.json に 'default_workflow' キーがありません"
                         : "'default_workflow' は空でない文字列である必要があります");
 
             if (config.Workflows == null)
-                throw new ComfyUIException("config.json に 'workflows' キーがありません");
+                throw new ComfyUIException("workflow_config.json に 'workflows' キーがありません");
 
             // 各ワークフローエントリを個別に検証する
             foreach (var (name, entry) in config.Workflows)
@@ -236,11 +236,11 @@ namespace ComfyUILibs.Services
             try
             {
                 return JsonSerializer.Deserialize<WorkflowConfig>(json, JsonOptions)
-                    ?? throw new ComfyUIException("config.json はオブジェクト形式である必要があります");
+                    ?? throw new ComfyUIException("workflow_config.json はオブジェクト形式である必要があります");
             }
             catch (JsonException ex)
             {
-                throw new ComfyUIException($"config.json の解析に失敗しました: {ex.Message}", ex);
+                throw new ComfyUIException($"workflow_config.json の解析に失敗しました: {ex.Message}", ex);
             }
         }
 
