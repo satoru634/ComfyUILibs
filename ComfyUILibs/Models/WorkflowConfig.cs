@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace ComfyUILibs.Models
 {
-    /// <summary>画像の幅と高さをピクセル単位で保持する。config.json および入力 JSON の image_size に対応。</summary>
+    /// <summary>画像の幅と高さをピクセル単位で保持する。workflow_config.json および入力 JSON の image_size に対応。</summary>
     public class ImageSize
     {
         /// <summary>画像の幅（ピクセル）。512〜2048 の範囲かつ 8 の倍数であること。</summary>
@@ -15,7 +15,7 @@ namespace ComfyUILibs.Models
     }
 
     /// <summary>
-    /// config.json の workflows[name].loras に定義された LoRA エントリ。
+    /// workflow_config.json の workflows[name].loras に定義された LoRA エントリ。
     /// キーがユーザー向けの論理名、このクラスが実ファイル名と強度を保持する。
     /// </summary>
     public class LoraEntry
@@ -30,7 +30,7 @@ namespace ComfyUILibs.Models
     }
 
     /// <summary>
-    /// config.json の workflows[name] に対応するワークフロー別設定。
+    /// workflow_config.json の workflows[name] に対応するワークフロー別設定。
     /// テンプレート選択・デフォルト画像サイズ・LoRA マッピングを保持する。
     /// </summary>
     public class WorkflowSettings
@@ -55,7 +55,7 @@ namespace ComfyUILibs.Models
     }
 
     /// <summary>
-    /// config.json の wd14_tagger セクションに対応する WD Timm Tagger の設定。
+    /// workflow_config.json の wd14_tagger セクションに対応する WD Timm Tagger の設定。
     /// Wd14TaggerRunner から参照される。
     /// </summary>
     public class Wd14TaggerConfig
@@ -74,7 +74,7 @@ namespace ComfyUILibs.Models
     }
 
     /// <summary>
-    /// config.json 全体に対応するルートオブジェクト。
+    /// workflow_config.json 全体に対応するルートオブジェクト。
     /// <see cref="ConfigLoader.LoadConfig"/> でファイルから読み込まれバリデーションされる。
     /// </summary>
     public class WorkflowConfig

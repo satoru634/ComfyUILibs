@@ -32,7 +32,7 @@ namespace ComfyUILibs.Services
         /// テンプレートは <c>templates/{workflowName}/template_lora_{N}.json</c> に配置されていること。
         /// </summary>
         /// <param name="loraCount">使用する LoRA の数（0〜4）。</param>
-        /// <param name="workflowName">ワークフロー名（config.json の workflows キーに一致）。</param>
+        /// <param name="workflowName">ワークフロー名（workflow_config.json の workflows キーに一致）。</param>
         /// <returns>テンプレートファイルの絶対パス。</returns>
         /// <exception cref="ComfyUIException">LoRA 数が範囲外・ディレクトリ欠落・ファイル欠落の場合。</exception>
         public string SelectTemplate(int loraCount, string workflowName)

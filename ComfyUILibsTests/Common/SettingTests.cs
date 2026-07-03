@@ -31,7 +31,7 @@ namespace ComfyUILibsTests.Common
         [Fact]
         public void Constructor_ExistingFile_LoadsDataOnInit()
         {
-            var path = TempPath("config.json");
+            var path = TempPath("workflow_config.json");
             JsonLoader.WriteJson(path, new Config { Host = "comfyui", Port = 8188 });
 
             var setting = new Setting<Config>(path);

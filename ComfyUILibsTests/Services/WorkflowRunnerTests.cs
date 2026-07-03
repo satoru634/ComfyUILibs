@@ -93,7 +93,7 @@ namespace ComfyUILibsTests.Services
             """;
 
         private WorkflowConfig LoadConfig()
-            => ConfigLoader.LoadConfig(WriteTempFile("config.json", ValidConfigJson()));
+            => ConfigLoader.LoadConfig(WriteTempFile("workflow_config.json", ValidConfigJson()));
 
         private string CreateTemplatesDir()
         {
