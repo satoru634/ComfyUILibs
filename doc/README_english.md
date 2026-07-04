@@ -48,6 +48,7 @@ ComfyUILibs/
     WorkflowInput.cs          # Input JSON model
     WorkflowResult.cs         # Execution result model
     ResolvedLora.cs           # Resolved LoRA entry
+    TagResult.cs              # WD14 Tagger execution result model
   Services/
     IComfyUIClient.cs         # ComfyUIClient interface (for DI / testing)
     ComfyUIClient.cs          # ComfyUI REST API + WebSocket client (includes image fetch via GET /view)
@@ -220,8 +221,9 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowRunnerTests.cs` | 11 | Mocked with FakeComfyUIClient (includes empty-outputs retry) |
 | `Services/Wd14TaggerRunnerTests.cs` | 5 | Tag extraction flow |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
+| `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 
-Total: **153 tests**
+Total: **156 tests**
 
 ---
 
