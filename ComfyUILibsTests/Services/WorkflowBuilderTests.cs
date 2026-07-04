@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json.Nodes;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 using ComfyUILibs.Services;
 
 namespace ComfyUILibsTests.Services
@@ -93,7 +94,7 @@ namespace ComfyUILibsTests.Services
 
             var ex = Assert.Throws<ComfyUIException>(() =>
                 builder.SelectTemplate(0, "nonexistent"));
-            Assert.Contains("テンプレートディレクトリ", ex.Message);
+            Assert.Equal(Messages.Get("WorkflowBuilder_TemplateDirNotFound_Format", "nonexistent"), ex.Message);
         }
 
         [Fact]
@@ -104,7 +105,7 @@ namespace ComfyUILibsTests.Services
 
             var ex = Assert.Throws<ComfyUIException>(() =>
                 builder.SelectTemplate(3, "sdxl"));
-            Assert.Contains("テンプレートファイル", ex.Message);
+            Assert.Equal(Messages.Get("WorkflowBuilder_TemplateFileNotFoundBySelector_Format", "sdxl", 3), ex.Message);
         }
 
         [Fact]

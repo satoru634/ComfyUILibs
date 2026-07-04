@@ -1,6 +1,7 @@
 using System.IO;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 using ComfyUILibs.Services;
 
 namespace ComfyUILibsTests.Services
@@ -96,7 +97,7 @@ namespace ComfyUILibsTests.Services
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.LoadConfig(Path.Combine(_tempDir, "nonexistent.json")));
 
-            Assert.Contains("見つかりません", ex.Message);
+            Assert.Equal(Messages.Get("ConfigLoader_ConfigFileNotFound"), ex.Message);
         }
 
         [Fact]
@@ -295,7 +296,7 @@ namespace ComfyUILibsTests.Services
         {
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.LoadAndValidateInput(Path.Combine(_tempDir, "missing.json")));
-            Assert.Contains("見つかりません", ex.Message);
+            Assert.Equal(Messages.Get("ConfigLoader_InputFileNotFound"), ex.Message);
         }
 
         [Fact]
@@ -338,7 +339,7 @@ namespace ComfyUILibsTests.Services
         {
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.ValidateLoras(new List<string> { "a", "b", "c", "d", "e" }));
-            Assert.Contains("最大4個", ex.Message);
+            Assert.Equal(Messages.Get("ConfigLoader_TooManyLoras_Format", 5), ex.Message);
         }
 
         [Fact]
