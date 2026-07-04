@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 using ComfyUILibs.Services;
 
 namespace ComfyUILibsTests.Services
@@ -168,7 +169,7 @@ namespace ComfyUILibsTests.Services
 
             var ex = await Assert.ThrowsAsync<ComfyUIException>(() =>
                 runner.TagAsync(new byte[] { 0 }));
-            Assert.Contains("出力が取得できませんでした", ex.Message);
+            Assert.Equal(Messages.Get("Wd14TaggerRunner_OutputNotFound"), ex.Message);
         }
 
         // ── ValidateWd14TaggerConfig ─────────────────────────────────────────
