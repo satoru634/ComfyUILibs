@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ComfyUIClient -->
+  <data name="ComfyUIClient_PromptIdMissing" xml:space="preserve"><value>ComfyUI response does not contain a prompt_id</value></data>
+  <data name="ComfyUIClient_WebSocketConnectionError_Format" xml:space="preserve"><value>WebSocket connection error: {0}</value></data>
+  <data name="ComfyUIClient_UnknownError" xml:space="preserve"><value>Unknown error</value></data>
+  <data name="ComfyUIClient_ExecutionError_Format" xml:space="preserve"><value>ComfyUI execution error: {0}</value></data>
+  <data name="ComfyUIClient_CompletionTimeout" xml:space="preserve"><value>Timed out waiting for ComfyUI to complete</value></data>
+  <data name="ComfyUIClient_NameMissing" xml:space="preserve"><value>ComfyUI response does not contain a name</value></data>
+  <data name="ComfyUIClient_ConnectionFailed_Format" xml:space="preserve"><value>Could not connect to ComfyUI: {0}</value></data>
+  <data name="ComfyUIClient_ConnectionTimeout" xml:space="preserve"><value>Timed out connecting to ComfyUI</value></data>
+  <data name="ComfyUIClient_HttpError_Format" xml:space="preserve"><value>ComfyUI returned an error: HTTP {0}</value></data>
+
+  <!-- ConfigLoader -->
+  <data name="ConfigLoader_ImageSizeOutOfRange_Format" xml:space="preserve"><value>'image_size.{0}' must be between {1} and {2} (given: {3})</value></data>
+  <data name="ConfigLoader_ImageSizeNotMultipleOf8_Format" xml:space="preserve"><value>'image_size.{0}' must be a multiple of 8 (given: {1})</value></data>
+  <data name="ConfigLoader_LoraFileEmpty_Format" xml:space="preserve"><value>workflow_config.json loras['{0}'].file must be a non-empty string</value></data>
+  <data name="ConfigLoader_LoraStrengthMissing_Format" xml:space="preserve"><value>workflow_config.json loras['{0}'].strength must be a number</value></data>
+  <data name="ConfigLoader_ImageSizeOrientationMissing_Format" xml:space="preserve"><value>workflow_config.json 'workflows.{0}.image_size' is missing the '{1}' key</value></data>
+  <data name="ConfigLoader_ImageSizeInvalid_Format" xml:space="preserve"><value>workflow_config.json workflows.{0}.image_size.{1} is invalid: {2}</value></data>
+  <data name="ConfigLoader_DefaultImageSizeMissing_Format" xml:space="preserve"><value>workflow_config.json 'workflows.{0}' is missing the 'default_image_size' key</value></data>
+  <data name="ConfigLoader_DefaultImageSizeInvalid_Format" xml:space="preserve"><value>workflow_config.json workflows.{0}.default_image_size is invalid: {1}</value></data>
+  <data name="ConfigLoader_WorkflowImageSizeMissing_Format" xml:space="preserve"><value>workflow_config.json 'workflows.{0}' is missing the 'image_size' key</value></data>
+  <data name="ConfigLoader_WorkflowLorasMissing_Format" xml:space="preserve"><value>workflow_config.json 'workflows.{0}' is missing the 'loras' key</value></data>
+  <data name="ConfigLoader_Wd14TaggerSectionMissing" xml:space="preserve"><value>workflow_config.json is missing the 'wd14_tagger' key</value></data>
+  <data name="ConfigLoader_Wd14ModelNameEmpty" xml:space="preserve"><value>workflow_config.json 'wd14_tagger.model_name' must be a non-empty string</value></data>
+  <data name="ConfigLoader_Wd14ThresholdKeyMissing_Format" xml:space="preserve"><value>workflow_config.json is missing the 'wd14_tagger.{0}' key</value></data>
+  <data name="ConfigLoader_Wd14ThresholdOutOfRange_Format" xml:space="preserve"><value>workflow_config.json 'wd14_tagger.{0}' must be between 0.0 and 1.0 (given: {1})</value></data>
+  <data name="ConfigLoader_ComfyuiUrlKeyMissing" xml:space="preserve"><value>workflow_config.json is missing the 'comfyui_url' key</value></data>
+  <data name="ConfigLoader_ComfyuiUrlEmpty" xml:space="preserve"><value>'comfyui_url' must be a non-empty string</value></data>
+  <data name="ConfigLoader_DefaultWorkflowKeyMissing" xml:space="preserve"><value>workflow_config.json is missing the 'default_workflow' key</value></data>
+  <data name="ConfigLoader_DefaultWorkflowEmpty" xml:space="preserve"><value>'default_workflow' must be a non-empty string</value></data>
+  <data name="ConfigLoader_WorkflowsKeyMissing" xml:space="preserve"><value>workflow_config.json is missing the 'workflows' key</value></data>
+  <data name="ConfigLoader_DefaultWorkflowNotFound_Format" xml:space="preserve"><value>'default_workflow' value '{0}' does not exist in 'workflows'</value></data>
+  <data name="ConfigLoader_ConfigFileNotFound" xml:space="preserve"><value>Configuration file not found</value></data>
+  <data name="ConfigLoader_ConfigNotObject" xml:space="preserve"><value>workflow_config.json must be a JSON object</value></data>
+  <data name="ConfigLoader_ConfigParseFailed_Format" xml:space="preserve"><value>Failed to parse workflow_config.json: {0}</value></data>
+  <data name="ConfigLoader_InputFileNotFound" xml:space="preserve"><value>Input file not found</value></data>
+  <data name="ConfigLoader_InputNotObject" xml:space="preserve"><value>Input JSON must be a JSON object</value></data>
+  <data name="ConfigLoader_InputParseFailed_Format" xml:space="preserve"><value>Failed to parse input JSON: {0}</value></data>
+  <data name="ConfigLoader_InputLorasKeyMissing" xml:space="preserve"><value>Input JSON is missing the 'loras' key</value></data>
+  <data name="ConfigLoader_InputPromptsKeyMissing" xml:space="preserve"><value>Input JSON is missing the 'prompts' key</value></data>
+  <data name="ConfigLoader_TooManyLoras_Format" xml:space="preserve"><value>A maximum of 4 LoRAs can be specified (given: {0})</value></data>
+  <data name="ConfigLoader_LoraEntryEmpty_Format" xml:space="preserve"><value>'loras[{0}]' must be a non-empty string</value></data>
+  <data name="ConfigLoader_PositivePromptTooLong_Format" xml:space="preserve"><value>'prompts.positive' is too long (maximum {0} characters)</value></data>
+  <data name="ConfigLoader_NegativePromptTooLong_Format" xml:space="preserve"><value>'prompts.negative' is too long (maximum {0} characters)</value></data>
+
+  <!-- Wd14TaggerRunner -->
+  <data name="Wd14TaggerRunner_TemplateFileNotFound" xml:space="preserve"><value>WD14 Tagger template file not found</value></data>
+  <data name="Wd14TaggerRunner_TemplateParseFailed" xml:space="preserve"><value>Failed to parse the WD14 Tagger template</value></data>
+  <data name="Wd14TaggerRunner_OutputNotFound" xml:space="preserve"><value>Failed to retrieve output from WD Timm Tagger</value></data>
+
+  <!-- WorkflowBuilder -->
+  <data name="WorkflowBuilder_LoraCountOutOfRange_Format" xml:space="preserve"><value>LoRA count must be between 0 and 4 (given: {0})</value></data>
+  <data name="WorkflowBuilder_TemplateDirNotFound_Format" xml:space="preserve"><value>Template directory not found: {0}</value></data>
+  <data name="WorkflowBuilder_TemplateFileNotFoundBySelector_Format" xml:space="preserve"><value>Template file not found: {0}/template_lora_{1}.json</value></data>
+  <data name="WorkflowBuilder_TemplateFileNotFound_Format" xml:space="preserve"><value>Template file not found: {0}</value></data>
+  <data name="WorkflowBuilder_TemplateParseFailed_Format" xml:space="preserve"><value>Failed to parse template JSON ({0})</value></data>
+  <data name="WorkflowBuilder_TemplateParseFailedWithReason_Format" xml:space="preserve"><value>Failed to parse template JSON ({0}): {1}</value></data>
+  <data name="WorkflowBuilder_NodeNotFound_Format" xml:space="preserve"><value>Node '{0}' not found in template</value></data>
+
+  <!-- WorkflowRunner -->
+  <data name="WorkflowRunner_WorkflowNotFound_Format" xml:space="preserve"><value>Workflow '{0}' does not exist in workflow_config.json workflows</value></data>
+  <data name="WorkflowRunner_LoraNotFound_Format" xml:space="preserve"><value>LoRA '{0}' does not exist in workflow_config.json loras configuration</value></data>
+</root>

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 
 namespace ComfyUILibs.Services
 {
@@ -52,10 +53,10 @@ namespace ComfyUILibs.Services
         {
             if (val < ImageSizeMin || val > ImageSizeMax)
                 throw new ComfyUIException(
-                    $"'image_size.{key}' は {ImageSizeMin}〜{ImageSizeMax} の範囲で指定してください（指定値: {val}）");
+                    Messages.Get("ConfigLoader_ImageSizeOutOfRange_Format", key, ImageSizeMin, ImageSizeMax, val));
             if (val % 8 != 0)
                 throw new ComfyUIException(
-                    $"'image_size.{key}' は 8 の倍数である必要があります（指定値: {val}）");
+                    Messages.Get("ConfigLoader_ImageSizeNotMultipleOf8_Format", key, val));
         }
 
         // ── LoRA エントリバリデーション ───────────────────────────────────────
@@ -68,11 +69,11 @@ namespace ComfyUILibs.Services
             {
                 if (string.IsNullOrWhiteSpace(entry.File))
                     throw new ComfyUIException(
-                        $"workflow_config.json loras['{name}'].file は空でない文字列である必要があります");
+                        Messages.Get("ConfigLoader_LoraFileEmpty_Format", name));
                 // strength が null = JSON にキーが存在しない（デシリアライズ時のデフォルト 0.0 と区別）
                 if (entry.Strength == null)
                     throw new ComfyUIException(
-                        $"workflow_config.json loras['{name}'].strength は数値である必要があります");
+                        Messages.Get("ConfigLoader_LoraStrengthMissing_Format", name));
             }
         }
 
@@ -88,7 +89,7 @@ namespace ComfyUILibs.Services
             {
                 if (!imageSizeMap.TryGetValue(orientation, out var size))
                     throw new ComfyUIException(
-                        $"workflow_config.json の 'workflows.{workflowName}.image_size' に '{orientation}' キーがありません");
+                        Messages.Get("ConfigLoader_ImageSizeOrientationMissing_Format", workflowName, orientation));
                 try
                 {
                     ValidateImageSize(size);
@@ -97,7 +98,7 @@ namespace ComfyUILibs.Services
                 {
                     // 元の例外をラップして、どのワークフロー・向きで失敗したかを明示する
                     throw new ComfyUIException(
-                        $"workflow_config.json の workflows.{workflowName}.image_size.{orientation} が不正です: {ex.Message}", ex);
+                        Messages.Get("ConfigLoader_ImageSizeInvalid_Format", workflowName, orientation, ex.Message), ex);
                 }
             }
         }
@@ -107,7 +108,7 @@ namespace ComfyUILibs.Services
         {
             if (entry.DefaultImageSize == null)
                 throw new ComfyUIException(
-                    $"workflow_config.json の 'workflows.{name}' に 'default_image_size' キーがありません");
+                    Messages.Get("ConfigLoader_DefaultImageSizeMissing_Format", name));
             try
             {
                 ValidateImageSize(entry.DefaultImageSize);
@@ -115,17 +116,17 @@ namespace ComfyUILibs.Services
             catch (ComfyUIException ex)
             {
                 throw new ComfyUIException(
-                    $"workflow_config.json の workflows.{name}.default_image_size が不正です: {ex.Message}", ex);
+                    Messages.Get("ConfigLoader_DefaultImageSizeInvalid_Format", name, ex.Message), ex);
             }
 
             if (entry.ImageSize == null)
                 throw new ComfyUIException(
-                    $"workflow_config.json の 'workflows.{name}' に 'image_size' キーがありません");
+                    Messages.Get("ConfigLoader_WorkflowImageSizeMissing_Format", name));
             ValidateWorkflowImageSize(name, entry.ImageSize);
 
             if (entry.Loras == null)
                 throw new ComfyUIException(
-                    $"workflow_config.json の 'workflows.{name}' に 'loras' キーがありません");
+                    Messages.Get("ConfigLoader_WorkflowLorasMissing_Format", name));
             ValidateLoraEntries(entry.Loras);
         }
 
@@ -140,12 +141,12 @@ namespace ComfyUILibs.Services
         public static void ValidateWd14TaggerConfig(WorkflowConfig config)
         {
             if (config.Wd14Tagger == null)
-                throw new ComfyUIException("workflow_config.json に 'wd14_tagger' キーがありません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_Wd14TaggerSectionMissing"));
 
             var wd14 = config.Wd14Tagger;
             if (string.IsNullOrWhiteSpace(wd14.ModelName))
                 throw new ComfyUIException(
-                    "workflow_config.json の 'wd14_tagger.model_name' は空でない文字列である必要があります");
+                    Messages.Get("ConfigLoader_Wd14ModelNameEmpty"));
 
             ValidateWd14Threshold("general_threshold", wd14.GeneralThreshold);
             ValidateWd14Threshold("character_threshold", wd14.CharacterThreshold);
@@ -155,10 +156,10 @@ namespace ComfyUILibs.Services
         private static void ValidateWd14Threshold(string key, double? val)
         {
             if (val == null)
-                throw new ComfyUIException($"workflow_config.json に 'wd14_tagger.{key}' キーがありません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_Wd14ThresholdKeyMissing_Format", key));
             if (val < 0.0 || val > 1.0)
                 throw new ComfyUIException(
-                    $"workflow_config.json の 'wd14_tagger.{key}' は 0.0〜1.0 の範囲で指定してください（指定値: {val}）");
+                    Messages.Get("ConfigLoader_Wd14ThresholdOutOfRange_Format", key, val));
         }
 
         // ── workflow_config.json ロード ────────────────────────────────────────────────
@@ -177,8 +178,8 @@ namespace ComfyUILibs.Services
             if (string.IsNullOrWhiteSpace(config.ComfyuiUrl))
                 throw new ComfyUIException(
                     config.ComfyuiUrl == null
-                        ? "workflow_config.json に 'comfyui_url' キーがありません"
-                        : "'comfyui_url' は空でない文字列である必要があります");
+                        ? Messages.Get("ConfigLoader_ComfyuiUrlKeyMissing")
+                        : Messages.Get("ConfigLoader_ComfyuiUrlEmpty"));
 
             return config;
         }
@@ -196,17 +197,17 @@ namespace ComfyUILibs.Services
             if (string.IsNullOrWhiteSpace(config.ComfyuiUrl))
                 throw new ComfyUIException(
                     config.ComfyuiUrl == null
-                        ? "workflow_config.json に 'comfyui_url' キーがありません"
-                        : "'comfyui_url' は空でない文字列である必要があります");
+                        ? Messages.Get("ConfigLoader_ComfyuiUrlKeyMissing")
+                        : Messages.Get("ConfigLoader_ComfyuiUrlEmpty"));
 
             if (string.IsNullOrWhiteSpace(config.DefaultWorkflow))
                 throw new ComfyUIException(
                     config.DefaultWorkflow == null
-                        ? "workflow_config.json に 'default_workflow' キーがありません"
-                        : "'default_workflow' は空でない文字列である必要があります");
+                        ? Messages.Get("ConfigLoader_DefaultWorkflowKeyMissing")
+                        : Messages.Get("ConfigLoader_DefaultWorkflowEmpty"));
 
             if (config.Workflows == null)
-                throw new ComfyUIException("workflow_config.json に 'workflows' キーがありません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_WorkflowsKeyMissing"));
 
             // 各ワークフローエントリを個別に検証する
             foreach (var (name, entry) in config.Workflows)
@@ -215,7 +216,7 @@ namespace ComfyUILibs.Services
             // default_workflow は workflows のキーとして存在しなければならない
             if (!config.Workflows.ContainsKey(config.DefaultWorkflow!))
                 throw new ComfyUIException(
-                    $"'default_workflow' の値 '{config.DefaultWorkflow}' が 'workflows' に存在しません");
+                    Messages.Get("ConfigLoader_DefaultWorkflowNotFound_Format", config.DefaultWorkflow));
 
             return config;
         }
@@ -230,17 +231,17 @@ namespace ComfyUILibs.Services
             }
             catch (FileNotFoundException)
             {
-                throw new ComfyUIException("設定ファイルが見つかりません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_ConfigFileNotFound"));
             }
 
             try
             {
                 return JsonSerializer.Deserialize<WorkflowConfig>(json, JsonOptions)
-                    ?? throw new ComfyUIException("workflow_config.json はオブジェクト形式である必要があります");
+                    ?? throw new ComfyUIException(Messages.Get("ConfigLoader_ConfigNotObject"));
             }
             catch (JsonException ex)
             {
-                throw new ComfyUIException($"workflow_config.json の解析に失敗しました: {ex.Message}", ex);
+                throw new ComfyUIException(Messages.Get("ConfigLoader_ConfigParseFailed_Format", ex.Message), ex);
             }
         }
 
@@ -262,18 +263,18 @@ namespace ComfyUILibs.Services
             }
             catch (FileNotFoundException)
             {
-                throw new ComfyUIException("入力ファイルが見つかりません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_InputFileNotFound"));
             }
 
             WorkflowInput input;
             try
             {
                 input = JsonSerializer.Deserialize<WorkflowInput>(json, JsonOptions)
-                    ?? throw new ComfyUIException("入力 JSON はオブジェクト形式である必要があります");
+                    ?? throw new ComfyUIException(Messages.Get("ConfigLoader_InputNotObject"));
             }
             catch (JsonException ex)
             {
-                throw new ComfyUIException($"入力 JSON の解析に失敗しました: {ex.Message}", ex);
+                throw new ComfyUIException(Messages.Get("ConfigLoader_InputParseFailed_Format", ex.Message), ex);
             }
 
             // デシリアライズでは「キー欠落」と「空配列/デフォルト値」を区別できないため、
@@ -281,9 +282,9 @@ namespace ComfyUILibs.Services
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             if (!root.TryGetProperty("loras", out _))
-                throw new ComfyUIException("入力 JSON に 'loras' キーがありません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_InputLorasKeyMissing"));
             if (!root.TryGetProperty("prompts", out _))
-                throw new ComfyUIException("入力 JSON に 'prompts' キーがありません");
+                throw new ComfyUIException(Messages.Get("ConfigLoader_InputPromptsKeyMissing"));
 
             return input;
         }
@@ -300,11 +301,11 @@ namespace ComfyUILibs.Services
         {
             if (loras.Count > 4)
                 throw new ComfyUIException(
-                    $"LoRA は最大4個まで指定できます（指定数: {loras.Count}）");
+                    Messages.Get("ConfigLoader_TooManyLoras_Format", loras.Count));
             for (int i = 0; i < loras.Count; i++)
             {
                 if (string.IsNullOrWhiteSpace(loras[i]))
-                    throw new ComfyUIException($"'loras[{i}]' は空でない文字列である必要があります");
+                    throw new ComfyUIException(Messages.Get("ConfigLoader_LoraEntryEmpty_Format", i));
             }
         }
 
@@ -318,10 +319,10 @@ namespace ComfyUILibs.Services
         {
             if (prompts.Positive.Length > MaxPromptLength)
                 throw new ComfyUIException(
-                    $"'prompts.positive' が長すぎます（最大 {MaxPromptLength} 文字）");
+                    Messages.Get("ConfigLoader_PositivePromptTooLong_Format", MaxPromptLength));
             if (prompts.Negative.Length > MaxPromptLength)
                 throw new ComfyUIException(
-                    $"'prompts.negative' が長すぎます（最大 {MaxPromptLength} 文字）");
+                    Messages.Get("ConfigLoader_NegativePromptTooLong_Format", MaxPromptLength));
         }
 
         /// <summary>

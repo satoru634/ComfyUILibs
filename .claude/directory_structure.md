@@ -13,6 +13,10 @@ ComfyUILibs/                            <- リポジトリルート
       Setting.cs                         <- 設定ファイル管理ジェネリッククラス
     Exceptions/                          <- 独自例外クラス群
       ComfyUIException.cs                <- 基底例外クラス
+    Resources/                           <- 多言語化用メッセージリソース
+      Messages.resx                      <- 例外メッセージ（既定・日本語）
+      Messages.en.resx                   <- 例外メッセージ（英語サテライト）
+      Messages.cs                        <- CurrentUICulture に応じてメッセージを解決する静的ヘルパー
     Models/                              <- データモデル
       WorkflowConfig.cs                  <- workflow_config.json モデル（ImageSize, LoraEntry, WorkflowSettings, Wd14TaggerConfig, WorkflowConfig）
       WorkflowInput.cs                   <- 入力 JSON モデル（PromptPair, WorkflowInput）
@@ -41,6 +45,8 @@ ComfyUILibs/                            <- リポジトリルート
       SettingTests.cs
     Exceptions/
       ComfyUIExceptionTests.cs
+    Resources/
+      MessagesTests.cs
     Models/
       TagResultTests.cs
     Services/

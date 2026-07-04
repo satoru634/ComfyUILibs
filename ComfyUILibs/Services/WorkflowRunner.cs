@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using ComfyUILibs.Common;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 
 namespace ComfyUILibs.Services
 {
@@ -90,7 +91,7 @@ namespace ComfyUILibs.Services
             _workflowName = workflowName ?? _config.DefaultWorkflow!;
             if (!_config.Workflows!.ContainsKey(_workflowName))
                 throw new ComfyUIException(
-                    $"ワークフロー '{_workflowName}' が workflow_config.json の workflows に存在しません");
+                    Messages.Get("WorkflowRunner_WorkflowNotFound_Format", _workflowName));
 
             _workflowSettings = _config.Workflows[_workflowName];
         }
@@ -217,7 +218,7 @@ namespace ComfyUILibs.Services
             {
                 if (!loraList.TryGetValue(name, out var entry))
                     throw new ComfyUIException(
-                        $"LoRA '{name}' が workflow_config.json の loras 設定に存在しません");
+                        Messages.Get("WorkflowRunner_LoraNotFound_Format", name));
                 resolved.Add(new ResolvedLora
                 {
                     Name = name,

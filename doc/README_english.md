@@ -18,6 +18,7 @@ This is a C# port of the Python implementation from [comfyui_tools](https://gith
 | Runs WD14 Tagger workflows | `Wd14TaggerRunner` |
 | Manages the local cache of generated image previews | `PreviewImageCacheService` |
 | Persists settings to JSON files | `Setting<T>` |
+| Localizes exception messages (Japanese / English) | `Resources.Messages` |
 
 ---
 
@@ -43,6 +44,10 @@ ComfyUILibs/
     Setting.cs                # Generic settings persistence class
   Exceptions/
     ComfyUIException.cs       # Base exception class
+  Resources/
+    Messages.resx             # Exception messages (default, Japanese)
+    Messages.en.resx          # Exception messages (English satellite)
+    Messages.cs               # Static helper that resolves messages based on CurrentUICulture
   Models/
     WorkflowConfig.cs         # workflow_config.json model
     WorkflowInput.cs          # Input JSON model
@@ -183,6 +188,34 @@ setting.Save();
 
 ---
 
+## Localization (exception messages)
+
+Messages thrown by `ComfyUIException` are managed in `Resources/Messages.resx` (default, Japanese) and `Messages.en.resx` (English), and are automatically resolved based on `CultureInfo.CurrentUICulture`.
+
+```csharp
+using System.Globalization;
+using ComfyUILibs.Resources;
+
+// If the caller (e.g. the WPF GUI) switches CurrentUICulture, subsequently thrown
+// ComfyUIException messages automatically switch to that language too
+CultureInfo.CurrentUICulture = new CultureInfo("en");
+
+try
+{
+    ConfigLoader.LoadConfig("workflow_config.json");
+}
+catch (ComfyUIException ex)
+{
+    Console.WriteLine(ex.Message); // English message
+}
+```
+
+- The default (neutral resource) is Japanese. English cultures such as `en` / `en-US` use `Messages.en.resx`.
+- To pin a specific default language regardless of the OS locale, explicitly set `CultureInfo.CurrentUICulture` at application startup.
+- When adding a new message, add the key to both `Messages.resx` (Japanese) and `Messages.en.resx` (English), and reference it via `Resources.Messages.Get("Key")` / `Get("Key", args...)`.
+
+---
+
 ## Template Files
 
 `WorkflowRunner` looks for templates in the `templates/` directory next to the executable.
@@ -222,8 +255,9 @@ dotnet test ComfyUILibs.sln
 | `Services/Wd14TaggerRunnerTests.cs` | 5 | Tag extraction flow |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
+| `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **156 tests**
+Total: **162 tests**
 
 ---
 

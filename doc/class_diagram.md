@@ -67,6 +67,14 @@ classDiagram
         +ComfyUIException(string, Exception)
     }
 
+    %% ----- Resources -----
+
+    class Messages {
+        <<static>>
+        +Get(string) string
+        +Get(string, object[]) string
+    }
+
     %% ----- Models -----
 
     class ImageSize {
@@ -245,11 +253,17 @@ classDiagram
     WorkflowRunner ..> WorkflowConfig : loads via ConfigLoader
     WorkflowRunner ..> WorkflowParameters : creates
     WorkflowRunner ..> OutputFile : returns
+    WorkflowRunner --> Messages : uses
 
     Wd14TaggerRunner --> IComfyUIClient : uses
     Wd14TaggerRunner --> ConfigLoader : uses
     Wd14TaggerRunner ..> Wd14TaggerConfig : uses
+    Wd14TaggerRunner --> Messages : uses
 
     PreviewImageCacheService --> IComfyUIClient : uses
     PreviewImageCacheService ..> OutputFile : uses
+
+    ComfyUIClient --> Messages : uses
+    ConfigLoader --> Messages : uses
+    WorkflowBuilder --> Messages : uses
 ```

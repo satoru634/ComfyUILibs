@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ComfyUILibs.Exceptions;
+using ComfyUILibs.Resources;
 
 namespace ComfyUILibs.Services
 {
@@ -69,11 +70,11 @@ namespace ComfyUILibs.Services
             }
             catch (FileNotFoundException)
             {
-                throw new ComfyUIException("WD14 Tagger テンプレートファイルが見つかりません");
+                throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_TemplateFileNotFound"));
             }
 
             var template = JsonNode.Parse(json)?.AsObject()
-                ?? throw new ComfyUIException("WD14 Tagger テンプレートの解析に失敗しました");
+                ?? throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_TemplateParseFailed"));
 
             // _meta.title をキーとする逆引きマップを構築する（ノード名でのアクセスに使用）
             var titleToId = new Dictionary<string, string>();
@@ -153,10 +154,10 @@ namespace ComfyUILibs.Services
                 && textArray.GetArrayLength() > 0)
             {
                 return textArray[0].GetString()
-                    ?? throw new ComfyUIException("WD Timm Tagger の出力が取得できませんでした");
+                    ?? throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_OutputNotFound"));
             }
 
-            throw new ComfyUIException("WD Timm Tagger の出力が取得できませんでした");
+            throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_OutputNotFound"));
         }
     }
 }

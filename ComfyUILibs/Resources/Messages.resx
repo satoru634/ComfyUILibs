@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ComfyUIClient -->
+  <data name="ComfyUIClient_PromptIdMissing" xml:space="preserve"><value>ComfyUI からの応答に prompt_id がありません</value></data>
+  <data name="ComfyUIClient_WebSocketConnectionError_Format" xml:space="preserve"><value>WebSocket 接続エラー: {0}</value></data>
+  <data name="ComfyUIClient_UnknownError" xml:space="preserve"><value>不明なエラー</value></data>
+  <data name="ComfyUIClient_ExecutionError_Format" xml:space="preserve"><value>ComfyUI 実行エラー: {0}</value></data>
+  <data name="ComfyUIClient_CompletionTimeout" xml:space="preserve"><value>ComfyUI の完了待機がタイムアウトしました</value></data>
+  <data name="ComfyUIClient_NameMissing" xml:space="preserve"><value>ComfyUI からの応答に name がありません</value></data>
+  <data name="ComfyUIClient_ConnectionFailed_Format" xml:space="preserve"><value>ComfyUI に接続できません: {0}</value></data>
+  <data name="ComfyUIClient_ConnectionTimeout" xml:space="preserve"><value>ComfyUI への接続がタイムアウトしました</value></data>
+  <data name="ComfyUIClient_HttpError_Format" xml:space="preserve"><value>ComfyUI がエラーを返しました: HTTP {0}</value></data>
+
+  <!-- ConfigLoader -->
+  <data name="ConfigLoader_ImageSizeOutOfRange_Format" xml:space="preserve"><value>'image_size.{0}' は {1}〜{2} の範囲で指定してください（指定値: {3}）</value></data>
+  <data name="ConfigLoader_ImageSizeNotMultipleOf8_Format" xml:space="preserve"><value>'image_size.{0}' は 8 の倍数である必要があります（指定値: {1}）</value></data>
+  <data name="ConfigLoader_LoraFileEmpty_Format" xml:space="preserve"><value>workflow_config.json loras['{0}'].file は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_LoraStrengthMissing_Format" xml:space="preserve"><value>workflow_config.json loras['{0}'].strength は数値である必要があります</value></data>
+  <data name="ConfigLoader_ImageSizeOrientationMissing_Format" xml:space="preserve"><value>workflow_config.json の 'workflows.{0}.image_size' に '{1}' キーがありません</value></data>
+  <data name="ConfigLoader_ImageSizeInvalid_Format" xml:space="preserve"><value>workflow_config.json の workflows.{0}.image_size.{1} が不正です: {2}</value></data>
+  <data name="ConfigLoader_DefaultImageSizeMissing_Format" xml:space="preserve"><value>workflow_config.json の 'workflows.{0}' に 'default_image_size' キーがありません</value></data>
+  <data name="ConfigLoader_DefaultImageSizeInvalid_Format" xml:space="preserve"><value>workflow_config.json の workflows.{0}.default_image_size が不正です: {1}</value></data>
+  <data name="ConfigLoader_WorkflowImageSizeMissing_Format" xml:space="preserve"><value>workflow_config.json の 'workflows.{0}' に 'image_size' キーがありません</value></data>
+  <data name="ConfigLoader_WorkflowLorasMissing_Format" xml:space="preserve"><value>workflow_config.json の 'workflows.{0}' に 'loras' キーがありません</value></data>
+  <data name="ConfigLoader_Wd14TaggerSectionMissing" xml:space="preserve"><value>workflow_config.json に 'wd14_tagger' キーがありません</value></data>
+  <data name="ConfigLoader_Wd14ModelNameEmpty" xml:space="preserve"><value>workflow_config.json の 'wd14_tagger.model_name' は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_Wd14ThresholdKeyMissing_Format" xml:space="preserve"><value>workflow_config.json に 'wd14_tagger.{0}' キーがありません</value></data>
+  <data name="ConfigLoader_Wd14ThresholdOutOfRange_Format" xml:space="preserve"><value>workflow_config.json の 'wd14_tagger.{0}' は 0.0〜1.0 の範囲で指定してください（指定値: {1}）</value></data>
+  <data name="ConfigLoader_ComfyuiUrlKeyMissing" xml:space="preserve"><value>workflow_config.json に 'comfyui_url' キーがありません</value></data>
+  <data name="ConfigLoader_ComfyuiUrlEmpty" xml:space="preserve"><value>'comfyui_url' は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_DefaultWorkflowKeyMissing" xml:space="preserve"><value>workflow_config.json に 'default_workflow' キーがありません</value></data>
+  <data name="ConfigLoader_DefaultWorkflowEmpty" xml:space="preserve"><value>'default_workflow' は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_WorkflowsKeyMissing" xml:space="preserve"><value>workflow_config.json に 'workflows' キーがありません</value></data>
+  <data name="ConfigLoader_DefaultWorkflowNotFound_Format" xml:space="preserve"><value>'default_workflow' の値 '{0}' が 'workflows' に存在しません</value></data>
+  <data name="ConfigLoader_ConfigFileNotFound" xml:space="preserve"><value>設定ファイルが見つかりません</value></data>
+  <data name="ConfigLoader_ConfigNotObject" xml:space="preserve"><value>workflow_config.json はオブジェクト形式である必要があります</value></data>
+  <data name="ConfigLoader_ConfigParseFailed_Format" xml:space="preserve"><value>workflow_config.json の解析に失敗しました: {0}</value></data>
+  <data name="ConfigLoader_InputFileNotFound" xml:space="preserve"><value>入力ファイルが見つかりません</value></data>
+  <data name="ConfigLoader_InputNotObject" xml:space="preserve"><value>入力 JSON はオブジェクト形式である必要があります</value></data>
+  <data name="ConfigLoader_InputParseFailed_Format" xml:space="preserve"><value>入力 JSON の解析に失敗しました: {0}</value></data>
+  <data name="ConfigLoader_InputLorasKeyMissing" xml:space="preserve"><value>入力 JSON に 'loras' キーがありません</value></data>
+  <data name="ConfigLoader_InputPromptsKeyMissing" xml:space="preserve"><value>入力 JSON に 'prompts' キーがありません</value></data>
+  <data name="ConfigLoader_TooManyLoras_Format" xml:space="preserve"><value>LoRA は最大4個まで指定できます（指定数: {0}）</value></data>
+  <data name="ConfigLoader_LoraEntryEmpty_Format" xml:space="preserve"><value>'loras[{0}]' は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_PositivePromptTooLong_Format" xml:space="preserve"><value>'prompts.positive' が長すぎます（最大 {0} 文字）</value></data>
+  <data name="ConfigLoader_NegativePromptTooLong_Format" xml:space="preserve"><value>'prompts.negative' が長すぎます（最大 {0} 文字）</value></data>
+
+  <!-- Wd14TaggerRunner -->
+  <data name="Wd14TaggerRunner_TemplateFileNotFound" xml:space="preserve"><value>WD14 Tagger テンプレートファイルが見つかりません</value></data>
+  <data name="Wd14TaggerRunner_TemplateParseFailed" xml:space="preserve"><value>WD14 Tagger テンプレートの解析に失敗しました</value></data>
+  <data name="Wd14TaggerRunner_OutputNotFound" xml:space="preserve"><value>WD Timm Tagger の出力が取得できませんでした</value></data>
+
+  <!-- WorkflowBuilder -->
+  <data name="WorkflowBuilder_LoraCountOutOfRange_Format" xml:space="preserve"><value>LoRA は 0〜4 個の範囲で指定してください（指定数: {0}）</value></data>
+  <data name="WorkflowBuilder_TemplateDirNotFound_Format" xml:space="preserve"><value>テンプレートディレクトリが見つかりません: {0}</value></data>
+  <data name="WorkflowBuilder_TemplateFileNotFoundBySelector_Format" xml:space="preserve"><value>テンプレートファイルが見つかりません: {0}/template_lora_{1}.json</value></data>
+  <data name="WorkflowBuilder_TemplateFileNotFound_Format" xml:space="preserve"><value>テンプレートファイルが見つかりません: {0}</value></data>
+  <data name="WorkflowBuilder_TemplateParseFailed_Format" xml:space="preserve"><value>テンプレート JSON の解析に失敗しました ({0})</value></data>
+  <data name="WorkflowBuilder_TemplateParseFailedWithReason_Format" xml:space="preserve"><value>テンプレート JSON の解析に失敗しました ({0}): {1}</value></data>
+  <data name="WorkflowBuilder_NodeNotFound_Format" xml:space="preserve"><value>テンプレートにノード '{0}' が見つかりません</value></data>
+
+  <!-- WorkflowRunner -->
+  <data name="WorkflowRunner_WorkflowNotFound_Format" xml:space="preserve"><value>ワークフロー '{0}' が workflow_config.json の workflows に存在しません</value></data>
+  <data name="WorkflowRunner_LoraNotFound_Format" xml:space="preserve"><value>LoRA '{0}' が workflow_config.json の loras 設定に存在しません</value></data>
+</root>

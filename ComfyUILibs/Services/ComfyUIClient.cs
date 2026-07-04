@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 
 namespace ComfyUILibs.Services
 {
@@ -51,7 +52,7 @@ namespace ComfyUILibs.Services
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonNode.Parse(responseJson);
             return result?["prompt_id"]?.GetValue<string>()
-                ?? throw new ComfyUIException("ComfyUI からの応答に prompt_id がありません");
+                ?? throw new ComfyUIException(Messages.Get("ComfyUIClient_PromptIdMissing"));
         }
 
         // ── WebSocket 監視 ─────────────────────────────────────────────────
@@ -71,7 +72,7 @@ namespace ComfyUILibs.Services
             catch (WebSocketException ex)
             {
                 ws.Dispose();
-                throw new ComfyUIException($"WebSocket 接続エラー: {ex.Message}", ex);
+                throw new ComfyUIException(Messages.Get("ComfyUIClient_WebSocketConnectionError_Format", ex.Message), ex);
             }
 
             using (ws)
@@ -136,8 +137,8 @@ namespace ComfyUILibs.Services
 
                 if (msgType == "execution_error")
                 {
-                    var errMsg = msgData?["exception_message"]?.GetValue<string>() ?? "不明なエラー";
-                    throw new ComfyUIException($"ComfyUI 実行エラー: {errMsg}");
+                    var errMsg = msgData?["exception_message"]?.GetValue<string>() ?? Messages.Get("ComfyUIClient_UnknownError");
+                    throw new ComfyUIException(Messages.Get("ComfyUIClient_ExecutionError_Format", errMsg));
                 }
 
                 // 古い ComfyUI の完了シグナル: executing{node: null} → ポーリングへ切り替え
@@ -202,7 +203,7 @@ namespace ComfyUILibs.Services
                     return;
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
-            throw new ComfyUIException("ComfyUI の完了待機がタイムアウトしました");
+            throw new ComfyUIException(Messages.Get("ComfyUIClient_CompletionTimeout"));
         }
 
         // ── 画像アップロード ───────────────────────────────────────────────
@@ -218,7 +219,7 @@ namespace ComfyUILibs.Services
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonNode.Parse(responseJson);
             return result?["name"]?.GetValue<string>()
-                ?? throw new ComfyUIException("ComfyUI からの応答に name がありません");
+                ?? throw new ComfyUIException(Messages.Get("ComfyUIClient_NameMissing"));
         }
 
         // ── 履歴取得 ──────────────────────────────────────────────────────
@@ -296,16 +297,16 @@ namespace ComfyUILibs.Services
             }
             catch (HttpRequestException ex)
             {
-                throw new ComfyUIException($"ComfyUI に接続できません: {ex.Message}", ex);
+                throw new ComfyUIException(Messages.Get("ComfyUIClient_ConnectionFailed_Format", ex.Message), ex);
             }
             catch (TaskCanceledException ex)
             {
-                throw new ComfyUIException("ComfyUI への接続がタイムアウトしました", ex);
+                throw new ComfyUIException(Messages.Get("ComfyUIClient_ConnectionTimeout"), ex);
             }
 
             if (!response.IsSuccessStatusCode)
                 throw new ComfyUIException(
-                    $"ComfyUI がエラーを返しました: HTTP {(int)response.StatusCode}");
+                    Messages.Get("ComfyUIClient_HttpError_Format", (int)response.StatusCode));
 
             return response;
         }

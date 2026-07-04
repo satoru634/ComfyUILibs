@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
+using ComfyUILibs.Resources;
 
 namespace ComfyUILibs.Services
 {
@@ -39,17 +40,17 @@ namespace ComfyUILibs.Services
         {
             if (loraCount < 0 || loraCount > 4)
                 throw new ComfyUIException(
-                    $"LoRA は 0〜4 個の範囲で指定してください（指定数: {loraCount}）");
+                    Messages.Get("WorkflowBuilder_LoraCountOutOfRange_Format", loraCount));
 
             var workflowDir = Path.Combine(_templatesDir, workflowName);
             if (!Directory.Exists(workflowDir))
                 throw new ComfyUIException(
-                    $"テンプレートディレクトリが見つかりません: {workflowName}");
+                    Messages.Get("WorkflowBuilder_TemplateDirNotFound_Format", workflowName));
 
             var path = Path.Combine(workflowDir, $"template_lora_{loraCount}.json");
             if (!File.Exists(path))
                 throw new ComfyUIException(
-                    $"テンプレートファイルが見つかりません: {workflowName}/template_lora_{loraCount}.json");
+                    Messages.Get("WorkflowBuilder_TemplateFileNotFoundBySelector_Format", workflowName, loraCount));
 
             return path;
         }
@@ -72,19 +73,19 @@ namespace ComfyUILibs.Services
             catch (FileNotFoundException)
             {
                 throw new ComfyUIException(
-                    $"テンプレートファイルが見つかりません: {Path.GetFileName(templatePath)}");
+                    Messages.Get("WorkflowBuilder_TemplateFileNotFound_Format", Path.GetFileName(templatePath)));
             }
 
             try
             {
                 return JsonNode.Parse(json)?.AsObject()
                     ?? throw new ComfyUIException(
-                        $"テンプレート JSON の解析に失敗しました ({Path.GetFileName(templatePath)})");
+                        Messages.Get("WorkflowBuilder_TemplateParseFailed_Format", Path.GetFileName(templatePath)));
             }
             catch (JsonException ex)
             {
                 throw new ComfyUIException(
-                    $"テンプレート JSON の解析に失敗しました ({Path.GetFileName(templatePath)}): {ex.Message}", ex);
+                    Messages.Get("WorkflowBuilder_TemplateParseFailedWithReason_Format", Path.GetFileName(templatePath), ex.Message), ex);
             }
         }
 
@@ -154,7 +155,7 @@ namespace ComfyUILibs.Services
             })
             {
                 if (!titleMap.TryGetValue(title, out var node))
-                    throw new ComfyUIException($"テンプレートにノード '{title}' が見つかりません");
+                    throw new ComfyUIException(Messages.Get("WorkflowBuilder_NodeNotFound_Format", title));
                 node["inputs"]!.AsObject()["text"] = JsonValue.Create(field);
             }
         }
@@ -166,7 +167,7 @@ namespace ComfyUILibs.Services
         {
             const string key = "empty_latent_image";
             if (!titleMap.TryGetValue(key, out var node))
-                throw new ComfyUIException($"テンプレートにノード '{key}' が見つかりません");
+                throw new ComfyUIException(Messages.Get("WorkflowBuilder_NodeNotFound_Format", key));
             var inputs = node["inputs"]!.AsObject();
             inputs["width"] = JsonValue.Create(imageSize.Width);
             inputs["height"] = JsonValue.Create(imageSize.Height);
@@ -182,7 +183,7 @@ namespace ComfyUILibs.Services
                 var lora = resolvedLoras[i];
                 var key = $"lora_loader_{i + 1}";
                 if (!titleMap.TryGetValue(key, out var node))
-                    throw new ComfyUIException($"テンプレートにノード '{key}' が見つかりません");
+                    throw new ComfyUIException(Messages.Get("WorkflowBuilder_NodeNotFound_Format", key));
                 var inputs = node["inputs"]!.AsObject();
                 inputs["lora_name"] = JsonValue.Create(lora.File);
                 inputs["strength_model"] = JsonValue.Create(lora.Strength);
