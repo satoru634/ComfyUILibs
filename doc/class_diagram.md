@@ -154,6 +154,21 @@ classDiagram
         +string? Error
     }
 
+    class CaptioningResult {
+        <<enumeration>>
+        Processed
+        Skipped
+        Error
+    }
+
+    class CaptioningProgress {
+        +int Current
+        +int Total
+        +string FileName
+        +CaptioningResult Result
+        +string? ErrorMessage
+    }
+
     %% ----- Services -----
 
     class IComfyUIClient {
@@ -210,6 +225,15 @@ classDiagram
         +TagAsync(byte[], string) Task~string~
     }
 
+    class CaptioningService {
+        -Wd14TaggerRunner _taggerRunner
+        -IReadOnlyList~string~ _prependTags
+        -IReadOnlyList~string~ _excludeTags
+        +CaptioningService(Wd14TaggerRunner, IReadOnlyList~string~, IReadOnlyList~string~)
+        +ProcessDirectoryAsync(string, bool, bool, IProgress~CaptioningProgress~) Task~(int,int,int)~
+        +GenerateReportAsync(string, bool) Task
+    }
+
     class IPreviewImageCacheService {
         <<interface>>
         +GetOrFetchAsync(IComfyUIClient, string?, OutputFile, string) Task~string?~
@@ -259,6 +283,11 @@ classDiagram
     Wd14TaggerRunner --> ConfigLoader : uses
     Wd14TaggerRunner ..> Wd14TaggerConfig : uses
     Wd14TaggerRunner --> Messages : uses
+
+    CaptioningService --> Wd14TaggerRunner : uses
+    CaptioningService ..> CaptioningProgress : reports
+    CaptioningService --> Messages : uses
+    CaptioningProgress "1" *-- "1" CaptioningResult : result
 
     PreviewImageCacheService --> IComfyUIClient : uses
     PreviewImageCacheService ..> OutputFile : uses
