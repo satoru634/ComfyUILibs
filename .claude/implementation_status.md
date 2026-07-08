@@ -40,6 +40,20 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - `Services/Wd14TaggerRunner.cs` — WD14 Tagger（wd14_tagger_runner.py 移植）
 - `Services/IPreviewImageCacheService.cs` / `PreviewImageCacheService.cs` — 生成画像プレビューのローカルキャッシュ管理
 
+## フェーズ3: CaptioningService の新設（`feature/captioning-service` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUICaptioningTool](https://github.com/satoru634/ComfyUICaptioningTool) の実装ロードマップ フェーズ1（ロジック配置の検討・ComfyUILibs の拡張）に対応。Python 版 `captioning_tool.py` の `CaptioningTool` クラス相当（ディレクトリ走査・タグフィルタ・タグ集計レポート）を UI 非依存のビジネスロジックとして本ライブラリに新設した。
+
+- [x] `Models/CaptioningProgress.cs` — `CaptioningResult`（Processed/Skipped/Error）列挙体と、`IProgress<CaptioningProgress>` 経由で通知する進捗レコードを追加
+- [x] `Services/CaptioningService.cs` — `Wd14TaggerRunner` をコンストラクター経由で受け取り、以下を提供
+  - `ProcessDirectoryAsync` — ディレクトリ内画像（`.jpg`/`.jpeg`/`.png`/`.webp`、再帰対応）を順次タグ付けし、同名 `.txt` に書き込む。1 ファイルごとに `IProgress<CaptioningProgress>` で通知。画像 1 枚の処理中の例外はすべて捕捉して `Error` として継続する（バッチ全体を止めるのはディレクトリ不存在の場合のみ）
+  - `GenerateReportAsync` — ディレクトリ内の全 `.txt`（`tags_report.txt` 自身は除外）を集計し、出現回数の多い順（同数はアルファベット順）で `tags_report.txt` に出力
+  - `ApplyTagFilters`（internal） — exclude 除去 → prepend 重複除去 → prepend 挿入、の順でタグ文字列をフィルタ
+- [x] 設計判断: サービス自体は `config.json`/`workflow_config.json` 相当の設定ファイルを読み込まない。prepend/exclude タグの union（設定ファイル値と追加指定値の合算）は呼び出し側（GUI 等）が解決してからコンストラクターに渡す方針とした（利用側ごとに設定の持ち方が異なるため）
+- [x] `Resources/Messages.resx`/`Messages.en.resx` に `CaptioningService_DirectoryNotFound_Format` を追加
+- [x] `ComfyUILibsTests/Services/CaptioningServiceTests.cs`（13件、タグフィルタ・ディレクトリ一括処理の再帰/上書き/エラー継続/進捗通知・タグ集計レポートを検証）を新規作成、全件パス確認済み
+- [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新
+
 ## フェーズ2: 例外メッセージの多言語化（`feature/i18n-messages` ブランチ、実装完了）
 
 `ComfyUIRunWorkflow` の多言語化（日本語/英語）に伴い、`ComfyUIException` がスローするメッセージを `.resx` ベースのリソースに外部化した。

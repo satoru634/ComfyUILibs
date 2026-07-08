@@ -109,6 +109,9 @@
   <data name="Wd14TaggerRunner_TemplateParseFailed" xml:space="preserve"><value>WD14 Tagger テンプレートの解析に失敗しました</value></data>
   <data name="Wd14TaggerRunner_OutputNotFound" xml:space="preserve"><value>WD Timm Tagger の出力が取得できませんでした</value></data>
 
+  <!-- CaptioningService -->
+  <data name="CaptioningService_DirectoryNotFound_Format" xml:space="preserve"><value>指定ディレクトリが存在しません: {0}</value></data>
+
   <!-- WorkflowBuilder -->
   <data name="WorkflowBuilder_LoraCountOutOfRange_Format" xml:space="preserve"><value>LoRA は 0〜4 個の範囲で指定してください（指定数: {0}）</value></data>
   <data name="WorkflowBuilder_TemplateDirNotFound_Format" xml:space="preserve"><value>テンプレートディレクトリが見つかりません: {0}</value></data>

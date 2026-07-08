@@ -16,6 +16,7 @@ This is a C# port of the Python implementation from [comfyui_tools](https://gith
 | Selects templates and applies prompts / LoRA / image size | `WorkflowBuilder` |
 | ComfyUI REST API and WebSocket client | `ComfyUIClient` |
 | Runs WD14 Tagger workflows | `Wd14TaggerRunner` |
+| Batch-tags directories, applies tag filters, and generates tag frequency reports | `CaptioningService` |
 | Manages the local cache of generated image previews | `PreviewImageCacheService` |
 | Persists settings to JSON files | `Setting<T>` |
 | Localizes exception messages (Japanese / English) | `Resources.Messages` |
@@ -54,6 +55,7 @@ ComfyUILibs/
     WorkflowResult.cs         # Execution result model
     ResolvedLora.cs           # Resolved LoRA entry
     TagResult.cs              # WD14 Tagger execution result model
+    CaptioningProgress.cs     # Progress notification model for CaptioningService (includes the CaptioningResult enum)
   Services/
     IComfyUIClient.cs         # ComfyUIClient interface (for DI / testing)
     ComfyUIClient.cs          # ComfyUI REST API + WebSocket client (includes image fetch via GET /view)
@@ -61,6 +63,7 @@ ComfyUILibs/
     WorkflowBuilder.cs        # Template selection and patching
     WorkflowRunner.cs         # Workflow execution facade
     Wd14TaggerRunner.cs       # WD14 Tagger workflow execution
+    CaptioningService.cs      # Batch directory tagging, tag filters, tag frequency reports
     IPreviewImageCacheService.cs # Preview image cache interface (for DI / testing)
     PreviewImageCacheService.cs  # Local cache management for generated image previews
   doc/
@@ -164,6 +167,34 @@ var tags = await tagger.TagAsync(imageData);
 // tags: "1girl, solo, smile, ..."
 ```
 
+### Batch Directory Tagging (CaptioningService)
+
+`CaptioningService` does not load its own configuration file; the caller passes in a
+`Wd14TaggerRunner` plus the prepend/exclude tags (with the union of config-file values and any
+extra values already resolved by the caller).
+
+```csharp
+var tagger = new Wd14TaggerRunner("workflow_config.json");
+var service = new CaptioningService(
+    tagger,
+    prependTags: new List<string> { "my_chara" },
+    excludeTags: new List<string> { "rating:general" });
+
+var progress = new Progress<CaptioningProgress>(p =>
+    Console.WriteLine($"[{p.Current}/{p.Total}] {p.FileName} -> {p.Result}"));
+
+var (processed, skipped, errors) = await service.ProcessDirectoryAsync(
+    "./images", recursive: true, overwrite: false, progress);
+Console.WriteLine($"Done: processed {processed}, skipped {skipped}, errors {errors}");
+
+// Aggregates every .txt file in the directory into tags_report.txt (tags_report.txt itself is excluded)
+await service.GenerateReportAsync("./images", recursive: true);
+```
+
+- Tag filtering order: `(1) remove excluded tags -> (2) remove tags duplicated with prepend tags -> (3) insert prepend tags at the front` (exact match, case-insensitive)
+- Supported extensions: `.jpg` `.jpeg` `.png` `.webp`
+- If an exception occurs while processing a single image, the batch continues and `CaptioningProgress.Result` is reported as `Error` (the only case where `ProcessDirectoryAsync` itself throws is when the target directory does not exist)
+
 ### Fetching a Cached Preview Image
 
 ```csharp
@@ -253,11 +284,12 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowBuilderTests.cs` | 14 | Template selection and patching |
 | `Services/WorkflowRunnerTests.cs` | 11 | Mocked with FakeComfyUIClient (includes empty-outputs retry) |
 | `Services/Wd14TaggerRunnerTests.cs` | 5 | Tag extraction flow |
+| `Services/CaptioningServiceTests.cs` | 13 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **162 tests**
+Total: **175 tests**
 
 ---
 

@@ -23,12 +23,15 @@ ComfyUILibs/                            <- リポジトリルート
       WorkflowResult.cs                  <- 結果モデル（OutputFile, WorkflowParameters, WorkflowResult）
       ResolvedLora.cs                    <- LoRA 解決済みエントリ
       TagResult.cs                       <- WD14 Tagger 実行結果モデル（tag_result_*.json 用）
+      CaptioningProgress.cs              <- CaptioningService の進捗通知モデル（CaptioningResult 列挙体を含む）
     Services/                            <- ComfyUI API 通信・ワークフロー制御ロジック
       IComfyUIClient.cs                  <- ComfyUIClient インターフェース（DI / テスト用、GetImageAsync を含む）
       ComfyUIClient.cs                   <- comfyui_client.py の移植（GET /view による画像取得を含む）
       WorkflowBuilder.cs                 <- workflow_builder.py の移植
       WorkflowRunner.cs                  <- WorkflowRunner クラスの移植
       Wd14TaggerRunner.cs                <- wd14_tagger_runner.py の移植
+      CaptioningService.cs               <- captioning_tool.py の CaptioningTool クラスの移植
+                                             （ディレクトリ走査・タグフィルタ・タグ集計レポート）
       ConfigLoader.cs                    <- load_files.py の移植
       IPreviewImageCacheService.cs       <- プレビュー画像キャッシュのインターフェース（DI / テスト用）
       PreviewImageCacheService.cs        <- 生成画像プレビューのローカルキャッシュ管理（GET /view 結果をファイルキャッシュ）
@@ -55,6 +58,7 @@ ComfyUILibs/                            <- リポジトリルート
       WorkflowBuilderTests.cs
       WorkflowRunnerTests.cs
       Wd14TaggerRunnerTests.cs
+      CaptioningServiceTests.cs
       PreviewImageCacheServiceTests.cs
   doc/
     README_english.md                   <- README.md の英語版
