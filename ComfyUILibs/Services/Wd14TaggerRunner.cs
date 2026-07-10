@@ -25,6 +25,12 @@ namespace ComfyUILibs.Services
         private readonly Models.WorkflowConfig _config;
         private readonly IComfyUIClient _client;
 
+        /// <summary>設定ファイルの prepend_tags（全画像に共通で先頭追加するタグ）。未指定時は空リスト。</summary>
+        public IReadOnlyList<string> PrependTags => _config.PrependTags ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+        /// <summary>設定ファイルの exclude_tags（全画像に共通で除外するタグ）。未指定時は空リスト。</summary>
+        public IReadOnlyList<string> ExcludeTags => _config.ExcludeTags ?? (IReadOnlyList<string>)Array.Empty<string>();
+
         /// <summary>起動時に読み込んだテンプレート JSON。Apply のたびに DeepCopy して使用する。</summary>
         private readonly JsonObject _template;
 
