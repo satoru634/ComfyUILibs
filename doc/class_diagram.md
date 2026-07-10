@@ -104,6 +104,8 @@ classDiagram
         +string? DefaultWorkflow
         +Dictionary~string,WorkflowSettings~? Workflows
         +Wd14TaggerConfig? Wd14Tagger
+        +List~string~? PrependTags
+        +List~string~? ExcludeTags
     }
 
     class PromptPair {
@@ -223,6 +225,8 @@ classDiagram
         -IComfyUIClient _client
         +Wd14TaggerRunner(string)
         +TagAsync(byte[], string) Task~string~
+        +IReadOnlyList~string~ PrependTags
+        +IReadOnlyList~string~ ExcludeTags
     }
 
     class CaptioningService {

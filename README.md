@@ -97,9 +97,13 @@ ComfyUILibs/
     "model_name": "wd-eva02-large-tagger-v3",
     "general_threshold": 0.35,
     "character_threshold": 0.85
-  }
+  },
+  "prepend_tags": ["my_chara"],
+  "exclude_tags": ["rating:general"]
 }
 ```
+
+`prepend_tags`/`exclude_tags` は `Wd14TaggerRunner` の `PrependTags`/`ExcludeTags` プロパティ経由で参照できる（キー自体が存在しない場合は空リスト）。バリデーション対象ではなく、`CaptioningService` を呼び出す側（GUI 等）が追加指定値との union を解決してから利用する想定。
 
 ### バリデーションルール
 
@@ -282,13 +286,13 @@ dotnet test ComfyUILibs.sln
 | `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
 | `Services/WorkflowBuilderTests.cs` | 14 | テンプレート選択・適用 |
 | `Services/WorkflowRunnerTests.cs` | 11 | FakeComfyUIClient によるモック（outputs 空リトライを含む） |
-| `Services/Wd14TaggerRunnerTests.cs` | 5 | タグ取得フロー |
+| `Services/Wd14TaggerRunnerTests.cs` | 9 | タグ取得フロー・PrependTags/ExcludeTags |
 | `Services/CaptioningServiceTests.cs` | 13 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **175 件**
+合計: **179 件**
 
 ---
 

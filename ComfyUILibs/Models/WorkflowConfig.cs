@@ -94,5 +94,13 @@ namespace ComfyUILibs.Models
         /// <summary>WD Timm Tagger の設定。このセクションが存在する場合のみ <see cref="Wd14TaggerRunner"/> が利用できる。</summary>
         [JsonPropertyName("wd14_tagger")]
         public Wd14TaggerConfig? Wd14Tagger { get; set; }
+
+        /// <summary>全画像に共通で先頭追加するタグ。キー自体が存在しない場合は null。</summary>
+        [JsonPropertyName("prepend_tags")]
+        public List<string>? PrependTags { get; set; }
+
+        /// <summary>全画像に共通で除外するタグ。キー自体が存在しない場合は null。</summary>
+        [JsonPropertyName("exclude_tags")]
+        public List<string>? ExcludeTags { get; set; }
     }
 }

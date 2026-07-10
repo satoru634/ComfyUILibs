@@ -54,6 +54,15 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - [x] `ComfyUILibsTests/Services/CaptioningServiceTests.cs`（13件、タグフィルタ・ディレクトリ一括処理の再帰/上書き/エラー継続/進捗通知・タグ集計レポートを検証）を新規作成、全件パス確認済み
 - [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新
 
+## フェーズ4: WorkflowConfig への prepend_tags/exclude_tags 追加（`feature/prepend-exclude-tags-in-config` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUICaptioningTool](https://github.com/satoru634/ComfyUICaptioningTool) 側で、既定 prepend/exclude タグの保持先を `AppConfig`（GUI 側の設定ファイル）から `captioning_config.json`（本ライブラリが読み込む設定ファイル）へ一本化するための変更。
+
+- [x] `Models/WorkflowConfig.cs` — `PrependTags`/`ExcludeTags`（`List<string>?`、JSON プロパティ名 `prepend_tags`/`exclude_tags`）を追加。バリデーション対象外（`ConfigLoader`/`ValidateWd14TaggerConfig` は変更なし）
+- [x] `Services/Wd14TaggerRunner.cs` — `PrependTags`/`ExcludeTags`（`IReadOnlyList<string>`）を公開プロパティとして追加。設定にキーが存在しない場合は空リストを返す
+- [x] `ComfyUILibsTests/Services/Wd14TaggerRunnerTests.cs` に4件追加（値あり/キー欠落 × PrependTags/ExcludeTags）、全件パス確認済み（合計179件）
+- [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新
+
 ## フェーズ2: 例外メッセージの多言語化（`feature/i18n-messages` ブランチ、実装完了）
 
 `ComfyUIRunWorkflow` の多言語化（日本語/英語）に伴い、`ComfyUIException` がスローするメッセージを `.resx` ベースのリソースに外部化した。

@@ -97,9 +97,13 @@ The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
     "model_name": "wd-eva02-large-tagger-v3",
     "general_threshold": 0.35,
     "character_threshold": 0.85
-  }
+  },
+  "prepend_tags": ["my_chara"],
+  "exclude_tags": ["rating:general"]
 }
 ```
+
+`prepend_tags`/`exclude_tags` are exposed via `Wd14TaggerRunner`'s `PrependTags`/`ExcludeTags` properties (an empty list if the key itself is absent). They are not validated; the caller of `CaptioningService` (e.g. the GUI) is expected to resolve the union with any additional values before use.
 
 ### Validation Rules
 
@@ -283,13 +287,13 @@ dotnet test ComfyUILibs.sln
 | `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
 | `Services/WorkflowBuilderTests.cs` | 14 | Template selection and patching |
 | `Services/WorkflowRunnerTests.cs` | 11 | Mocked with FakeComfyUIClient (includes empty-outputs retry) |
-| `Services/Wd14TaggerRunnerTests.cs` | 5 | Tag extraction flow |
+| `Services/Wd14TaggerRunnerTests.cs` | 9 | Tag extraction flow, PrependTags/ExcludeTags |
 | `Services/CaptioningServiceTests.cs` | 13 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **175 tests**
+Total: **179 tests**
 
 ---
 

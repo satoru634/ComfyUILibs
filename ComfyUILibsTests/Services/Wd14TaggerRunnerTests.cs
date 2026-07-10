@@ -104,10 +104,11 @@ namespace ComfyUILibsTests.Services
             return path;
         }
 
-        private Wd14TaggerRunner CreateRunner(IComfyUIClient? fakeClient = null, string? previewNodeId = null)
+        private Wd14TaggerRunner CreateRunner(
+            IComfyUIClient? fakeClient = null, string? previewNodeId = null, WorkflowConfig? config = null)
         {
             CreateTemplateFile(previewNodeId ?? "3");
-            var config = CreateTaggerConfig();
+            config ??= CreateTaggerConfig();
 
             // AppDomain.CurrentDomain.BaseDirectory を一時的に上書きできないため、
             // テスト用にテンプレートを実際のベースディレクトリにも配置する
@@ -186,6 +187,50 @@ namespace ComfyUILibsTests.Services
 
             Assert.Throws<ComfyUIException>(() =>
                 new Wd14TaggerRunner(config, new FakeTaggerClient()));
+        }
+
+        // ── PrependTags / ExcludeTags ────────────────────────────────────────
+
+        [Fact]
+        public void PrependTags_ConfigHasValues_ReturnsConfigValues()
+        {
+            var config = CreateTaggerConfig();
+            config.PrependTags = new List<string> { "my_chara", "1girl" };
+
+            var runner = CreateRunner(config: config);
+
+            Assert.Equal(new[] { "my_chara", "1girl" }, runner.PrependTags);
+        }
+
+        [Fact]
+        public void ExcludeTags_ConfigHasValues_ReturnsConfigValues()
+        {
+            var config = CreateTaggerConfig();
+            config.ExcludeTags = new List<string> { "rating:general" };
+
+            var runner = CreateRunner(config: config);
+
+            Assert.Equal(new[] { "rating:general" }, runner.ExcludeTags);
+        }
+
+        [Fact]
+        public void PrependTags_ConfigKeyMissing_ReturnsEmptyList()
+        {
+            var config = CreateTaggerConfig();
+
+            var runner = CreateRunner(config: config);
+
+            Assert.Empty(runner.PrependTags);
+        }
+
+        [Fact]
+        public void ExcludeTags_ConfigKeyMissing_ReturnsEmptyList()
+        {
+            var config = CreateTaggerConfig();
+
+            var runner = CreateRunner(config: config);
+
+            Assert.Empty(runner.ExcludeTags);
         }
     }
 
