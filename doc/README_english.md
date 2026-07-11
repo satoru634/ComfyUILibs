@@ -287,13 +287,13 @@ dotnet test ComfyUILibs.sln
 | `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
 | `Services/WorkflowBuilderTests.cs` | 14 | Template selection and patching |
 | `Services/WorkflowRunnerTests.cs` | 11 | Mocked with FakeComfyUIClient (includes empty-outputs retry) |
-| `Services/Wd14TaggerRunnerTests.cs` | 9 | Tag extraction flow, PrependTags/ExcludeTags |
+| `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
 | `Services/CaptioningServiceTests.cs` | 13 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **179 tests**
+Total: **181 tests**
 
 ---
 

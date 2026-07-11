@@ -22,6 +22,17 @@ namespace ComfyUILibs.Services
         /// <summary>タグ文字列を出力する PreviewAny ノードのタイトル。</summary>
         private const string PreviewTitle = "プレビュー任意";
 
+        /// <summary>
+        /// <see cref="IComfyUIClient.MonitorAsync"/> が完了を検知した直後は、ComfyUI 側の
+        /// history への反映がわずかに遅延し <c>GetHistoryAsync</c> がタグ未反映の結果を返すことが
+        /// あるため（<see cref="WorkflowRunner"/> の outputs 取得と同様の事象）、
+        /// 取得できなかった場合にリトライする回数。
+        /// </summary>
+        private const int MaxExtractRetryCount = 3;
+
+        /// <summary>タグ取得リトライの間隔。</summary>
+        private static readonly TimeSpan ExtractRetryDelay = TimeSpan.FromMilliseconds(300);
+
         private readonly Models.WorkflowConfig _config;
         private readonly IComfyUIClient _client;
 
@@ -151,19 +162,26 @@ namespace ComfyUILibs.Services
         /// <exception cref="ComfyUIException">履歴構造が不正またはタグが見つからない場合。</exception>
         private async Task<string> ExtractTagsAsync(string promptId)
         {
-            var history = await _client.GetHistoryAsync(promptId);
             var previewId = _titleToId[PreviewTitle];
 
-            if (history.TryGetProperty("outputs", out var outputs)
-                && outputs.TryGetProperty(previewId, out var previewOutput)
-                && previewOutput.TryGetProperty("text", out var textArray)
-                && textArray.GetArrayLength() > 0)
+            for (int attempt = 0; ; attempt++)
             {
-                return textArray[0].GetString()
-                    ?? throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_OutputNotFound"));
-            }
+                var history = await _client.GetHistoryAsync(promptId);
 
-            throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_OutputNotFound"));
+                if (history.TryGetProperty("outputs", out var outputs)
+                    && outputs.TryGetProperty(previewId, out var previewOutput)
+                    && previewOutput.TryGetProperty("text", out var textArray)
+                    && textArray.GetArrayLength() > 0
+                    && textArray[0].GetString() is string tags)
+                {
+                    return tags;
+                }
+
+                if (attempt >= MaxExtractRetryCount)
+                    throw new ComfyUIException(Messages.Get("Wd14TaggerRunner_OutputNotFound"));
+
+                await Task.Delay(ExtractRetryDelay);
+            }
         }
     }
 }

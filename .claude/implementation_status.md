@@ -63,6 +63,16 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - [x] `ComfyUILibsTests/Services/Wd14TaggerRunnerTests.cs` に4件追加（値あり/キー欠落 × PrependTags/ExcludeTags）、全件パス確認済み（合計179件）
 - [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新
 
+## フェーズ5: Wd14TaggerRunner のタグ取得リトライ（`fix/wd14-tagger-output-retry` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUICaptioningTool](https://github.com/satoru634/ComfyUICaptioningTool) でのディレクトリ一括タグ付け実行時、数枚に1枚程度の頻度で `Wd14TaggerRunner_OutputNotFound`（「WD Timm Tagger の出力が取得できませんでした」）エラーが発生する不具合を修正した。
+
+- **原因**: `ComfyUIClient.MonitorAsync` が `execution_success`/`execution_complete` の WebSocket メッセージ受信、または `IsCompletedAsync` による history キー存在確認の直後に即座に完了とみなして返る一方、ComfyUI サーバー側は WebSocket メッセージ送信後に history への書き込み（`PromptQueue.task_done`）を行う実装のため、メッセージ受信直後に `GetHistoryAsync` を呼ぶと history の `outputs` フィールドがまだ反映されていないことがある（競合状態）。`WorkflowRunner.ExecuteAsync` の `GetOutputsAsync` は既にこの事象を認識してリトライ処理（`MaxOutputsRetryCount`＝3回、`OutputsRetryDelay`＝300ms）を実装済みだったが、`Wd14TaggerRunner.ExtractTagsAsync` には同様のリトライが実装されておらず、初回の `GetHistoryAsync` が空振りした場合に即エラーとなっていた
+- [x] `Services/Wd14TaggerRunner.cs` の `ExtractTagsAsync` に `WorkflowRunner` と同じリトライ処理（`MaxExtractRetryCount`＝3回、`ExtractRetryDelay`＝300ms）を追加。タグが取得できるまで、または上限に達するまで `GetHistoryAsync` を再試行する
+- [x] `ComfyUILibsTests/Services/Wd14TaggerRunnerTests.cs` に `DelayedHistoryTaggerClient`（指定回数だけ空の history を返すフェイククライアント）を追加し、「リトライ後に成功」「リトライ上限超過でエラー」の2件を新規作成。全件パス確認済み（合計181件）
+- [x] `README.md`/`doc/README_english.md` を更新
+- **注記**: 本修正は当初 `../ComfyUIRunWorkflow/ComfyUILibs/`（別リポジトリの submodule 実体）側で先に実装したが、`ComfyUICaptioningTool` のビルド参照先が実際には本リポジトリ（`ComfyUICaptioningTool/ComfyUILibs/`）側であると判明したため、同内容をこちらにも反映した（`ComfyUICaptioningTool.sln`/`ComfyUICaptioningTool.csproj` の参照パス誤りは利用側で修正済み）
+
 ## フェーズ2: 例外メッセージの多言語化（`feature/i18n-messages` ブランチ、実装完了）
 
 `ComfyUIRunWorkflow` の多言語化（日本語/英語）に伴い、`ComfyUIException` がスローするメッセージを `.resx` ベースのリソースに外部化した。
