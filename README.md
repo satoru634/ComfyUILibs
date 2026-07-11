@@ -286,13 +286,13 @@ dotnet test ComfyUILibs.sln
 | `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
 | `Services/WorkflowBuilderTests.cs` | 14 | テンプレート選択・適用 |
 | `Services/WorkflowRunnerTests.cs` | 11 | FakeComfyUIClient によるモック（outputs 空リトライを含む） |
-| `Services/Wd14TaggerRunnerTests.cs` | 9 | タグ取得フロー・PrependTags/ExcludeTags |
+| `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
 | `Services/CaptioningServiceTests.cs` | 13 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **179 件**
+合計: **181 件**
 
 ---
 

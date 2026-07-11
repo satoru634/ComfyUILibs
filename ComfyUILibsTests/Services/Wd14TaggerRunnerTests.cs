@@ -173,6 +173,30 @@ namespace ComfyUILibsTests.Services
             Assert.Equal(Messages.Get("Wd14TaggerRunner_OutputNotFound"), ex.Message);
         }
 
+        [Fact]
+        public async Task TagAsync_HistoryPopulatedAfterRetry_ReturnsTagString()
+        {
+            // MonitorAsync 完了直後は history 反映が間に合わず空になることがある事象を再現する
+            var fakeClient = new DelayedHistoryTaggerClient(emptyResponseCount: 2, tags: "1girl, solo");
+            var runner = CreateRunner(fakeClient, "3");
+
+            var tags = await runner.TagAsync(new byte[] { 0 });
+
+            Assert.Equal("1girl, solo", tags);
+        }
+
+        [Fact]
+        public async Task TagAsync_HistoryNeverPopulated_ThrowsAfterMaxRetries()
+        {
+            // リトライ上限（3回）を超えても反映されない場合は最終的にエラーとする
+            var fakeClient = new DelayedHistoryTaggerClient(emptyResponseCount: int.MaxValue, tags: "1girl, solo");
+            var runner = CreateRunner(fakeClient, "3");
+
+            var ex = await Assert.ThrowsAsync<ComfyUIException>(() =>
+                runner.TagAsync(new byte[] { 0 }));
+            Assert.Equal(Messages.Get("Wd14TaggerRunner_OutputNotFound"), ex.Message);
+        }
+
         // ── ValidateWd14TaggerConfig ─────────────────────────────────────────
 
         [Fact]
@@ -264,6 +288,44 @@ namespace ComfyUILibsTests.Services
         public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
         public Task<JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(JsonDocument.Parse("""{"outputs":{"3":{}}}""").RootElement.Clone());
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+            => Task.FromResult(new List<OutputFile>());
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
+    }
+
+    /// <summary>
+    /// 最初の <c>emptyResponseCount</c> 回は history が空（outputs 未反映）を返し、
+    /// それ以降はタグ入り history を返すテスト用クライアント。
+    /// MonitorAsync 完了直後に history 反映が間に合わない事象を再現する。
+    /// </summary>
+    internal class DelayedHistoryTaggerClient : IComfyUIClient
+    {
+        private readonly int _emptyResponseCount;
+        private readonly string _tags;
+        private int _callCount;
+
+        public DelayedHistoryTaggerClient(int emptyResponseCount, string tags)
+        {
+            _emptyResponseCount = emptyResponseCount;
+            _tags = tags;
+        }
+
+        public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
+            => Task.FromResult("uploaded.png");
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+            => Task.FromResult("pid");
+        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+
+        public Task<JsonElement> GetHistoryAsync(string promptId)
+        {
+            if (_callCount++ < _emptyResponseCount)
+                return Task.FromResult(JsonDocument.Parse("{}").RootElement.Clone());
+
+            var json = "{\"outputs\":{\"3\":{\"text\":[\"" + _tags + "\"]}}}";
+            return Task.FromResult(JsonDocument.Parse(json).RootElement.Clone());
+        }
+
         public Task<List<OutputFile>> GetOutputsAsync(string promptId)
             => Task.FromResult(new List<OutputFile>());
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
