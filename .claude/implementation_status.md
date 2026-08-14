@@ -73,6 +73,16 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - [x] `README.md`/`doc/README_english.md` を更新
 - **注記**: 本修正は当初 `../ComfyUIRunWorkflow/ComfyUILibs/`（別リポジトリの submodule 実体）側で先に実装したが、`ComfyUICaptioningTool` のビルド参照先が実際には本リポジトリ（`ComfyUICaptioningTool/ComfyUILibs/`）側であると判明したため、同内容をこちらにも反映した（`ComfyUICaptioningTool.sln`/`ComfyUICaptioningTool.csproj` の参照パス誤りは利用側で修正済み）
 
+## フェーズ6: filename_prefix 上書き対応（`feature/filename-prefix` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUIRunWorkflow](https://github.com/satoru634/ComfyUIRunWorkflow) の DashboardPage/QueuePage に、生成画像の出力ファイル名プレフィックス（ComfyUI の `SaveImage` ノードの `filename_prefix`）を GUI から指定できるテキストボックスを追加するための変更。
+
+- [x] `Services/WorkflowBuilder.cs` — `Apply` に `string? filenamePrefix = null` 引数を追加。非 null かつ空白以外の場合のみ、ワークフロー内の `class_type` が `SaveImage` の全ノードの `inputs.filename_prefix` を上書きする（`ApplyFilenamePrefix` として新設）。null または空白のみの場合はテンプレートに記述された値をそのまま使用する
+- [x] `Services/WorkflowRunner.cs` — `ExecuteAsync` に `string? filenamePrefix = null` 引数を追加し、`WorkflowBuilder.Apply` へそのまま渡すよう変更
+- [x] `ComfyUILibsTests/Services/WorkflowBuilderTests.cs` — `MinimalTemplateJson` に `SaveImage` ノードを追加し、上書き時／null・空文字・空白時にテンプレート既定値が保持されることを検証するテストを追加
+- [x] `ComfyUILibsTests/Services/WorkflowRunnerTests.cs` — `FakeComfyUIClient` に `LastSubmittedWorkflow` を追加し、`ExecuteAsync` の `filenamePrefix` が実際に送信されるワークフロー JSON に反映される／されないことを検証するテストを追加。全件パス確認済み（合計187件）
+- [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新
+
 ## フェーズ2: 例外メッセージの多言語化（`feature/i18n-messages` ブランチ、実装完了）
 
 `ComfyUIRunWorkflow` の多言語化（日本語/英語）に伴い、`ComfyUIException` がスローするメッセージを `.resx` ベースのリソースに外部化した。

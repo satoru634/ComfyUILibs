@@ -199,7 +199,7 @@ classDiagram
         -string _templatesDir
         +SelectTemplate(int, string) string
         +LoadTemplate(string) JsonObject
-        +Apply(JsonObject, PromptPair, List~ResolvedLora~, long?, ImageSize?) JsonObject
+        +Apply(JsonObject, PromptPair, List~ResolvedLora~, long?, ImageSize?, string?) JsonObject
     }
 
     class WorkflowRunner {
@@ -208,7 +208,7 @@ classDiagram
         +WorkflowParameters? Parameters
         +WorkflowRunner(string, string)
         +GetImageSize(string) ImageSize
-        +ExecuteAsync(List~string~, PromptPair, ImageSize?) Task~List~OutputFile~~
+        +ExecuteAsync(List~string~, PromptPair, ImageSize?, string?) Task~List~OutputFile~~
         +RunAsync(string, string) Task
     }
 
