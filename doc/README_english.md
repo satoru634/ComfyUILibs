@@ -136,6 +136,10 @@ var outputs = await runner.ExecuteAsync(loras, prompts, imageSize);
 // Right after completion is detected, ComfyUI's history may not be updated yet and
 // GetOutputsAsync can return an empty list; if so, it is retried up to 3 times at 300ms intervals
 
+// Passing filenamePrefix overrides the SaveImage node's filename_prefix.
+// If null or whitespace-only, the value already written in the template is kept as-is.
+var outputsWithPrefix = await runner.ExecuteAsync(loras, prompts, imageSize, filenamePrefix: "my_batch");
+
 // Metadata available after execution
 Console.WriteLine(runner.PromptId);     // prompt_id assigned by ComfyUI
 Console.WriteLine(runner.TemplatePath); // path to the template that was used
@@ -285,15 +289,15 @@ dotnet test ComfyUILibs.sln
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException construction and inheritance |
 | `Services/ConfigLoaderTests.cs` | 38 | Validation — happy path and error cases |
 | `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
-| `Services/WorkflowBuilderTests.cs` | 14 | Template selection and patching |
-| `Services/WorkflowRunnerTests.cs` | 11 | Mocked with FakeComfyUIClient (includes empty-outputs retry) |
+| `Services/WorkflowBuilderTests.cs` | 18 | Template selection and patching (includes filename_prefix override) |
+| `Services/WorkflowRunnerTests.cs` | 13 | Mocked with FakeComfyUIClient (includes empty-outputs retry and filenamePrefix propagation) |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
 | `Services/CaptioningServiceTests.cs` | 13 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **181 tests**
+Total: **187 tests**
 
 ---
 

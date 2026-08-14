@@ -50,6 +50,11 @@ namespace ComfyUILibsTests.Services
                 "class_type": "EmptyLatentImage",
                 "inputs": {"width": 512, "height": 512, "seed": 0},
                 "_meta": {"title": "empty_latent_image"}
+              },
+              "4": {
+                "class_type": "SaveImage",
+                "inputs": {"filename_prefix": "original_prefix"},
+                "_meta": {"title": "画像を保存"}
               }
               {{LoraNodes(loraCount)}}
             }
@@ -252,6 +257,37 @@ namespace ComfyUILibsTests.Services
             var loraNode = result["11"]!["inputs"]!.AsObject();
             Assert.Equal("my_lora.safetensors", loraNode["lora_name"]!.GetValue<string>());
             Assert.Equal(0.8, loraNode["strength_model"]!.GetValue<double>());
+        }
+
+        // ── Apply: filename_prefix ────────────────────────────────────────────
+
+        [Fact]
+        public void Apply_WithFilenamePrefix_OverridesSaveImagePrefix()
+        {
+            WriteTemplate("sdxl", 0, MinimalTemplateJson());
+            var builder = CreateBuilder();
+            var workflow = builder.LoadTemplate(builder.SelectTemplate(0, "sdxl"));
+
+            var result = builder.Apply(workflow, new PromptPair(), new List<ResolvedLora>(), filenamePrefix: "my_prefix");
+
+            var prefix = result["4"]!["inputs"]!["filename_prefix"]!.GetValue<string>();
+            Assert.Equal("my_prefix", prefix);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Apply_WithoutFilenamePrefix_KeepsTemplateDefault(string? filenamePrefix)
+        {
+            WriteTemplate("sdxl", 0, MinimalTemplateJson());
+            var builder = CreateBuilder();
+            var workflow = builder.LoadTemplate(builder.SelectTemplate(0, "sdxl"));
+
+            var result = builder.Apply(workflow, new PromptPair(), new List<ResolvedLora>(), filenamePrefix: filenamePrefix);
+
+            var prefix = result["4"]!["inputs"]!["filename_prefix"]!.GetValue<string>();
+            Assert.Equal("original_prefix", prefix);
         }
 
         [Fact]

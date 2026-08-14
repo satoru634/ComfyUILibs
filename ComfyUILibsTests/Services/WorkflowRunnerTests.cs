@@ -18,8 +18,12 @@ namespace ComfyUILibsTests.Services
         public Queue<List<OutputFile>>? OutputsSequence { get; set; }
         public int GetOutputsCallCount { get; private set; }
 
+        /// <summary>直近の SubmitAsync 呼び出しで受け取ったワークフロー（送信内容の検証用）。</summary>
+        public JsonObject? LastSubmittedWorkflow { get; private set; }
+
         public Task<string> SubmitAsync(JsonObject workflow, string clientId)
         {
+            LastSubmittedWorkflow = workflow;
             if (ThrowOnSubmit != null)
                 throw ThrowOnSubmit;
             return Task.FromResult(PromptId);
@@ -88,7 +92,8 @@ namespace ComfyUILibsTests.Services
             {
               "1": {"class_type":"CLIPTextEncode","inputs":{"text":"","seed":0},"_meta":{"title":"positive_prompt"}},
               "2": {"class_type":"CLIPTextEncode","inputs":{"text":""},"_meta":{"title":"negative_prompt"}},
-              "3": {"class_type":"EmptyLatentImage","inputs":{"width":512,"height":512,"seed":0},"_meta":{"title":"empty_latent_image"}}
+              "3": {"class_type":"EmptyLatentImage","inputs":{"width":512,"height":512,"seed":0},"_meta":{"title":"empty_latent_image"}},
+              "4": {"class_type":"SaveImage","inputs":{"filename_prefix":"original_prefix"},"_meta":{"title":"画像を保存"}}
             }
             """;
 
@@ -254,6 +259,37 @@ namespace ComfyUILibsTests.Services
             Assert.Empty(outputs);
             // 初回 + リトライ3回 = 4回
             Assert.Equal(4, fakeClient.GetOutputsCallCount);
+        }
+
+        // ── ExecuteAsync: filenamePrefix ─────────────────────────────────────
+
+        [Fact]
+        public async Task ExecuteAsync_WithFilenamePrefix_SubmitsOverriddenPrefix()
+        {
+            var fakeClient = new FakeComfyUIClient();
+            var runner = CreateRunner(fakeClient);
+
+            await runner.ExecuteAsync(
+                new List<string>(),
+                new PromptPair { Positive = "pos", Negative = "neg" },
+                filenamePrefix: "custom_prefix");
+
+            var prefix = fakeClient.LastSubmittedWorkflow!["4"]!["inputs"]!["filename_prefix"]!.GetValue<string>();
+            Assert.Equal("custom_prefix", prefix);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WithoutFilenamePrefix_SubmitsTemplateDefault()
+        {
+            var fakeClient = new FakeComfyUIClient();
+            var runner = CreateRunner(fakeClient);
+
+            await runner.ExecuteAsync(
+                new List<string>(),
+                new PromptPair { Positive = "pos", Negative = "neg" });
+
+            var prefix = fakeClient.LastSubmittedWorkflow!["4"]!["inputs"]!["filename_prefix"]!.GetValue<string>();
+            Assert.Equal("original_prefix", prefix);
         }
 
         // ── RunAsync ──────────────────────────────────────────────────────────

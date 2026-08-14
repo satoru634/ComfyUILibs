@@ -100,6 +100,9 @@ namespace ComfyUILibs.Services
         /// <param name="resolvedLoras">解決済み LoRA エントリのリスト。</param>
         /// <param name="seed">シード値。null の場合は 0〜2^53 の乱数を自動生成する。</param>
         /// <param name="imageSize">画像サイズ。null の場合はテンプレートのデフォルト値を維持する。</param>
+        /// <param name="filenamePrefix">
+        /// 出力ファイル名のプレフィックス。null または空白のみの場合はテンプレートに記述された値をそのまま使用する。
+        /// </param>
         /// <returns>各値が適用された新しいワークフロー JSON。</returns>
         /// <exception cref="ComfyUIException">必要なノードがテンプレートに存在しない場合。</exception>
         public JsonObject Apply(
@@ -107,7 +110,8 @@ namespace ComfyUILibs.Services
             PromptPair prompts,
             List<ResolvedLora> resolvedLoras,
             long? seed = null,
-            ImageSize? imageSize = null)
+            ImageSize? imageSize = null,
+            string? filenamePrefix = null)
         {
             // テンプレートを直接書き換えないよう DeepCopy してから処理する
             var cloned = JsonNode.Parse(workflow.ToJsonString())!.AsObject();
@@ -121,6 +125,8 @@ namespace ComfyUILibs.Services
                 ApplyImageSize(titleMap, imageSize);
             // seed が null の場合は Python 版と同様に 0〜2^53 の乱数を使用する
             ApplySeeds(cloned, seed ?? Random.Shared.NextInt64(0, (1L << 53) + 1));
+            if (!string.IsNullOrWhiteSpace(filenamePrefix))
+                ApplyFilenamePrefix(cloned, filenamePrefix);
 
             return cloned;
         }
@@ -203,6 +209,24 @@ namespace ComfyUILibs.Services
                     && inputs.ContainsKey("seed"))
                 {
                     inputs["seed"] = JsonValue.Create(seed);
+                }
+            }
+        }
+
+        /// <summary>
+        /// <c>class_type</c> が <c>SaveImage</c> の全ノードの <c>inputs.filename_prefix</c> を設定する。
+        /// 呼び出し元（<see cref="Apply"/>）で filenamePrefix が空白のみでないことを確認済み。
+        /// </summary>
+        private static void ApplyFilenamePrefix(JsonObject workflow, string filenamePrefix)
+        {
+            foreach (var kvp in workflow)
+            {
+                if (kvp.Value is JsonObject node
+                    && node["class_type"] is JsonValue classType
+                    && classType.GetValue<string>() == "SaveImage"
+                    && node["inputs"] is JsonObject inputs)
+                {
+                    inputs["filename_prefix"] = JsonValue.Create(filenamePrefix);
                 }
             }
         }

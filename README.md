@@ -136,6 +136,10 @@ var outputs = await runner.ExecuteAsync(loras, prompts, imageSize);
 // 完了検知直後に ComfyUI 側の history 反映が間に合わず空リストが返ることがあるため、
 // 空だった場合は 300ms 間隔で最大 3 回まで自動リトライする
 
+// filenamePrefix を指定すると SaveImage ノードの filename_prefix を上書きできる。
+// null または空白のみの場合はテンプレートに記述された値をそのまま使用する。
+var outputsWithPrefix = await runner.ExecuteAsync(loras, prompts, imageSize, filenamePrefix: "my_batch");
+
 // 実行後のメタ情報
 Console.WriteLine(runner.PromptId);    // ComfyUI の prompt_id
 Console.WriteLine(runner.TemplatePath); // 使用したテンプレートのパス
@@ -284,15 +288,15 @@ dotnet test ComfyUILibs.sln
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException の構築・継承 |
 | `Services/ConfigLoaderTests.cs` | 38 | 正常系・異常系のバリデーション |
 | `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
-| `Services/WorkflowBuilderTests.cs` | 14 | テンプレート選択・適用 |
-| `Services/WorkflowRunnerTests.cs` | 11 | FakeComfyUIClient によるモック（outputs 空リトライを含む） |
+| `Services/WorkflowBuilderTests.cs` | 18 | テンプレート選択・適用（filename_prefix 上書きを含む） |
+| `Services/WorkflowRunnerTests.cs` | 13 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播を含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
 | `Services/CaptioningServiceTests.cs` | 13 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート |
 | `Services/PreviewImageCacheServiceTests.cs` | 12 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **181 件**
+合計: **187 件**
 
 ---
 

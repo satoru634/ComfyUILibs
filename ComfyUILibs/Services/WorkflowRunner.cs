@@ -112,12 +112,16 @@ namespace ComfyUILibs.Services
         /// <param name="loras">LoRA 論理名のリスト（最大 4 件、workflow_config.json のキーと一致すること）。</param>
         /// <param name="prompts">正・負プロンプトのペア。</param>
         /// <param name="imageSize">画像サイズ。null の場合はワークフローの default_image_size を使用する。</param>
+        /// <param name="filenamePrefix">
+        /// 出力ファイル名のプレフィックス。null または空白のみの場合はテンプレートに記述された値をそのまま使用する。
+        /// </param>
         /// <returns>生成された出力ファイルのリスト。</returns>
         /// <exception cref="ComfyUIException">バリデーション失敗・LoRA 解決失敗・ComfyUI エラーの場合。</exception>
         public async Task<List<OutputFile>> ExecuteAsync(
             List<string> loras,
             PromptPair prompts,
-            ImageSize? imageSize = null)
+            ImageSize? imageSize = null,
+            string? filenamePrefix = null)
         {
             // 各実行前に前回の状態をクリアする（RunAsync で例外発生時の参照を防ぐ）
             TemplatePath = null;
@@ -142,7 +146,7 @@ namespace ComfyUILibs.Services
             var builder = _builderOverride ?? new WorkflowBuilder(_templatesDir);
             var templatePath = builder.SelectTemplate(resolved.Count, _workflowName);
             var workflow = builder.LoadTemplate(templatePath);
-            var builtWorkflow = builder.Apply(workflow, prompts, resolved, imageSize: effectiveSize);
+            var builtWorkflow = builder.Apply(workflow, prompts, resolved, imageSize: effectiveSize, filenamePrefix: filenamePrefix);
 
             var client = _clientOverride ?? new ComfyUIClient(_config.ComfyuiUrl!);
             var clientId = Guid.NewGuid().ToString();
