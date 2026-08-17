@@ -100,6 +100,32 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - ResourceManager はカルチャに satellite がない場合 neutral resource（既定）にフォールバックするが、`en`/`en-US` の satellite が存在する場合はそちらが優先される。そのため「OS ロケールに関わらず常に日本語をデフォルトにする」という要件は、ComfyUIRunWorkflow 側が起動時に明示的に `CultureInfo.CurrentUICulture` をセットすることで担保する（本ライブラリ側では制御しない）
 - 本ライブラリは UI 非依存の方針を維持しつつ、`CultureInfo.CurrentUICulture`（.NET 標準のスレッドローカル設定）を見るだけなので `ComfyUILibs/CLAUDE.md` の「UI・プレゼンテーション層のコードは一切含まない」という制約に抵触しない
 
+## フェーズ7: wdv3-timm ローカルプロセス版タグ付けランナーの追加（`feature/wdv3-timm-tagger-runner` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUICaptioningTool](https://github.com/satoru634/ComfyUICaptioningTool) の GUI は現状 ComfyUI（WD Timm Tagger カスタムノード）経由のタグ付けのみに対応しているが、ComfyUI を使わずローカルスクリプト `wdv3-timm`（`E:\Python_project\wdv3-timm`、timm ライブラリで WD Tagger V3 を実行する単一スクリプトのサンプルリポジトリ）を直接使う別ツールを検討している。GUI（View/ViewModel）の大半は共通化しつつバックエンドだけ差し替えられるよう、本フェーズで `CaptioningService` が `Wd14TaggerRunner` の具象型ではなく抽象インターフェース経由でタグ取得を行うようリファクタリングし、wdv3-timm 向けの新しい `ITaggerRunner` 実装を追加した。
+
+- **性能面の設計判断（ユーザー確認済み）**: `wdv3_timm.py` は実行のたびにモデルをロードする単発 CLI のため、画像 1 枚ごとにプロセスを起動するとモデル再ロードのオーバーヘッドで実用的な速度が出ない。3 案（(1) wdv3-timm 側に常駐サーバーモードを追加、(2) ディレクトリ単位で 1 回だけプロセスを起動、(3) 画像 1 枚ごとにプロセスを起動する簡易実装）を提示し、(1) 常駐サーバーモード方式を採用した。これにより `CaptioningService`/`ITaggerRunner` の「画像 1 枚単位」というインターフェース設計は変更せずに済んでいる
+- [x] `Services/ITaggerRunner.cs`（新設） — `PrependTags`/`ExcludeTags`/`TagAsync(byte[], string)` を持つインターフェース。`CaptioningService` はこれ経由でタグ取得を行い、バックエンドの違いを意識しない
+- [x] `Services/Wd14TaggerRunner.cs` — `ITaggerRunner` を実装するよう変更（ロジック変更なし、`: ITaggerRunner` を追加しただけ）
+- [x] `Services/CaptioningService.cs` — コンストラクター引数・フィールドの型を `Wd14TaggerRunner` → `ITaggerRunner` に変更（`Wd14TaggerRunner` は `ITaggerRunner` を実装するため、既存の呼び出しコードは変更不要）
+- [x] `Models/WorkflowConfig.cs` — `WdV3TimmConfig`（`exe_path`/`model`/`general_threshold`/`character_threshold`）と `WorkflowConfig.WdV3Timm`（JSON キー `wdv3_timm`）を追加。`wd14_tagger` と `wdv3_timm` は排他ではなく、使用するバックエンドに応じて必要な方のセクションのみを用意すればよい設計とした
+- [x] `Services/ConfigLoader.cs` — `ValidateWdV3TimmConfig`（exe_path 空チェック・model が既知の5種のいずれか・しきい値 0.0〜1.0）と `LoadWdV3TimmConfig`（comfyui_url 不要でロードするだけの薄いラッパー）を追加
+- [x] `Services/IWdV3TimmProcessClient.cs`（新設、テスト境界） — wdv3-timm 常駐サーバープロセスとの標準入出力通信を抽象化。**プロトコル契約を XML ドキュメントコメントに明記**（後日 wdv3-timm 側の `--serve` モード実装がこれに従う想定）:
+  - 起動: `<exe_path> --serve --model <model> -g <general_threshold> -c <character_threshold>`
+  - モデルロード完了後、標準出力に 1 行だけ `{"status":"ready"}` を出力する（進捗ログ等は標準エラー出力に書き、標準出力はプロトコル専用とする）
+  - リクエスト: 標準入力へ 1 行 `{"image_path":"<絶対パス>"}` を書き込み flush
+  - 応答: 標準出力へ 1 行、成功時 `{"status":"ok","tags":"1girl, blue_eyes, solo"}`、失敗時 `{"status":"error","message":"..."}`
+  - 終了: クライアントが標準入力を閉じる（EOF）とサーバーは処理中のリクエストを終えてから終了する
+- [x] `Services/WdV3TimmProcessClient.cs`（新設） — `IWdV3TimmProcessClient` の既定実装。`System.Diagnostics.Process` で起動し、`StartAsync` で ready シグナルを待機、`DisposeAsync` で標準入力を閉じてグレースフル終了を待ち（タイムアウト 5 秒）、超過時は `Kill(entireProcessTree: true)` で強制終了する
+- [x] `Services/WdV3TimmTaggerRunner.cs`（新設） — `ITaggerRunner`/`IAsyncDisposable` を実装。初回 `TagAsync` 呼び出し時にサーバープロセスを遅延起動し（`SemaphoreSlim` で多重起動防止）、以降の呼び出しは同じプロセスを使い回す。`TagAsync` は画像バイト列を一時ファイル（`Path.GetTempPath()`、拡張子はファイル名から判定・省略時は `.png`）へ書き出し、そのパスをリクエストとして送信、応答受信後は一時ファイルを削除する（成功・失敗いずれの場合も `finally` で削除）
+- [x] `Resources/Messages.resx`/`Messages.en.resx` — `ConfigLoader_WdV3Timm*`（5件）・`WdV3TimmTaggerRunner_*`（5件）を追加
+- [x] `ComfyUILibsTests/Services/WdV3TimmTaggerRunnerTests.cs`（新設、16件） — `FakeWdV3TimmProcessClient`（起動引数・リクエスト・キュー済み応答を記録するモック）を使用。設定バリデーション・`PrependTags`/`ExcludeTags`・初回呼び出し時の遅延プロセス起動と起動引数の検証・2 回目以降は再起動しないこと・一時ファイルへの書き込みと（成功/失敗いずれの場合も）削除・正常応答/エラー応答/EOF（プロセス予期せぬ終了）/不正 JSON 応答それぞれの解釈・`DisposeAsync` の挙動（未起動時は何もしない／起動済みならプロセスクライアントを終了する）を検証
+- [x] `ComfyUILibsTests/Services/ConfigLoaderTests.cs` に `ValidateWdV3TimmConfig`/`LoadWdV3TimmConfig` のテストを14件追加
+- [x] `ComfyUILibsTests/Services/CaptioningServiceTests.cs` に、`Wd14TaggerRunner` を経由しない `ITaggerRunner` の直接実装（`FakeTaggerRunner`）と組み合わせても `CaptioningService` が正しく動作することを検証するテストを1件追加（抽象化のリグレッションテスト）
+- 全件パス確認済み（`ComfyUILibsTests.exe` 直接実行で確認。187件 → 218件）
+- `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/本ファイルを更新
+- **本フェーズのスコープ外**: wdv3-timm リポジトリ（`E:\Python_project\wdv3-timm`）側の `--serve` 常駐サーバーモード実装は別タスク（プロトコル契約は上記の通り本フェーズで確定済み）。利用側プロジェクト（ComfyUICaptioningTool）の GUI 配線（バックエンド選択 UI・`ConfigPage` への `wdv3_timm` セクション編集追加等）も別タスク
+
 ## テスト（ComfyUILibsTests）
 
 各クラスに対応するテストを `ComfyUILibsTests/<同じ名前空間>/` に配置済み。件数の内訳は `README.md` の「テスト」セクション参照（全パス）。

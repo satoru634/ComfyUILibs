@@ -162,6 +162,45 @@ namespace ComfyUILibs.Services
                     Messages.Get("ConfigLoader_Wd14ThresholdOutOfRange_Format", key, val));
         }
 
+        // ── wdv3-timm 設定バリデーション ──────────────────────────────────────
+
+        /// <summary>wdv3_timm.model に指定できるモデル名（wdv3_timm.py の MODEL_REPO_MAP のキーと一致）。</summary>
+        private static readonly string[] WdV3TimmModelChoices =
+            { "vit", "swinv2", "convnext", "eva02", "vit-large" };
+
+        /// <summary>
+        /// config の wdv3_timm セクションを検証する。
+        /// <see cref="WdV3TimmTaggerRunner"/> のコンストラクターから呼ばれる。
+        /// </summary>
+        /// <param name="config">検証対象の設定オブジェクト。</param>
+        /// <exception cref="ComfyUIException">セクション欠落・exe_path 空・model 不正・しきい値が範囲外の場合。</exception>
+        public static void ValidateWdV3TimmConfig(WorkflowConfig config)
+        {
+            if (config.WdV3Timm == null)
+                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmSectionMissing"));
+
+            var wdv3 = config.WdV3Timm;
+            if (string.IsNullOrWhiteSpace(wdv3.ExePath))
+                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmExePathEmpty"));
+
+            if (string.IsNullOrWhiteSpace(wdv3.Model) || !WdV3TimmModelChoices.Contains(wdv3.Model))
+                throw new ComfyUIException(
+                    Messages.Get("ConfigLoader_WdV3TimmModelInvalid_Format", string.Join(", ", WdV3TimmModelChoices)));
+
+            ValidateWdV3TimmThreshold("general_threshold", wdv3.GeneralThreshold);
+            ValidateWdV3TimmThreshold("character_threshold", wdv3.CharacterThreshold);
+        }
+
+        /// <summary>wdv3-timm のしきい値（0.0〜1.0）を検証する。</summary>
+        private static void ValidateWdV3TimmThreshold(string key, double? val)
+        {
+            if (val == null)
+                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmThresholdKeyMissing_Format", key));
+            if (val < 0.0 || val > 1.0)
+                throw new ComfyUIException(
+                    Messages.Get("ConfigLoader_WdV3TimmThresholdOutOfRange_Format", key, val));
+        }
+
         // ── workflow_config.json ロード ────────────────────────────────────────────────
 
         /// <summary>
@@ -182,6 +221,19 @@ namespace ComfyUILibs.Services
                         : Messages.Get("ConfigLoader_ComfyuiUrlEmpty"));
 
             return config;
+        }
+
+        /// <summary>
+        /// wdv3-timm 専用の workflow_config.json を読み込む。ComfyUI を経由しないため
+        /// comfyui_url は不要（未検証）。wdv3_timm セクションの検証は
+        /// <see cref="ValidateWdV3TimmConfig"/>（呼び出し元のコンストラクターから呼ばれる）で行う。
+        /// </summary>
+        /// <param name="configPath">workflow_config.json のパス。</param>
+        /// <returns>読み込んだ設定オブジェクト（未検証）。</returns>
+        /// <exception cref="ComfyUIException">ファイル欠落・JSON 不正の場合。</exception>
+        public static WorkflowConfig LoadWdV3TimmConfig(string configPath)
+        {
+            return LoadAndParseConfig(configPath);
         }
 
         /// <summary>

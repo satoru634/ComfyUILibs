@@ -99,11 +99,19 @@ classDiagram
         +double? CharacterThreshold
     }
 
+    class WdV3TimmConfig {
+        +string? ExePath
+        +string? Model
+        +double? GeneralThreshold
+        +double? CharacterThreshold
+    }
+
     class WorkflowConfig {
         +string? ComfyuiUrl
         +string? DefaultWorkflow
         +Dictionary~string,WorkflowSettings~? Workflows
         +Wd14TaggerConfig? Wd14Tagger
+        +WdV3TimmConfig? WdV3Timm
         +List~string~? PrependTags
         +List~string~? ExcludeTags
     }
@@ -221,6 +229,13 @@ classDiagram
         +ValidateWd14TaggerConfig(WorkflowConfig) void
     }
 
+    class ITaggerRunner {
+        <<interface>>
+        +IReadOnlyList~string~ PrependTags
+        +IReadOnlyList~string~ ExcludeTags
+        +TagAsync(byte[], string) Task~string~
+    }
+
     class Wd14TaggerRunner {
         -IComfyUIClient _client
         +Wd14TaggerRunner(string)
@@ -229,11 +244,35 @@ classDiagram
         +IReadOnlyList~string~ ExcludeTags
     }
 
+    class IWdV3TimmProcessClient {
+        <<interface>>
+        +StartAsync(string, IReadOnlyList~string~) Task
+        +SendRequestAsync(string) Task~string?~
+        +DisposeAsync() ValueTask
+    }
+
+    class WdV3TimmProcessClient {
+        -Process? _process
+        +StartAsync(string, IReadOnlyList~string~) Task
+        +SendRequestAsync(string) Task~string?~
+        +DisposeAsync() ValueTask
+    }
+
+    class WdV3TimmTaggerRunner {
+        -IWdV3TimmProcessClient _processClient
+        -bool _started
+        +WdV3TimmTaggerRunner(string)
+        +TagAsync(byte[], string) Task~string~
+        +IReadOnlyList~string~ PrependTags
+        +IReadOnlyList~string~ ExcludeTags
+        +DisposeAsync() ValueTask
+    }
+
     class CaptioningService {
-        -Wd14TaggerRunner _taggerRunner
+        -ITaggerRunner _taggerRunner
         -IReadOnlyList~string~ _prependTags
         -IReadOnlyList~string~ _excludeTags
-        +CaptioningService(Wd14TaggerRunner, IReadOnlyList~string~, IReadOnlyList~string~)
+        +CaptioningService(ITaggerRunner, IReadOnlyList~string~, IReadOnlyList~string~)
         +ProcessDirectoryAsync(string, bool, bool, IProgress~CaptioningProgress~) Task~(int,int,int)~
         +GenerateReportAsync(string, bool) Task
     }
@@ -256,6 +295,9 @@ classDiagram
     Exception <|-- ComfyUIException
     IComfyUIClient <|.. ComfyUIClient
     IPreviewImageCacheService <|.. PreviewImageCacheService
+    ITaggerRunner <|.. Wd14TaggerRunner
+    ITaggerRunner <|.. WdV3TimmTaggerRunner
+    IWdV3TimmProcessClient <|.. WdV3TimmProcessClient
 
     %% ----- 関連 -----
 
@@ -263,6 +305,7 @@ classDiagram
 
     WorkflowConfig "1" *-- "*" WorkflowSettings : workflows
     WorkflowConfig "1" o-- "0..1" Wd14TaggerConfig : wd14_tagger
+    WorkflowConfig "1" o-- "0..1" WdV3TimmConfig : wdv3_timm
     WorkflowSettings "1" o-- "0..1" ImageSize : defaultImageSize
     WorkflowSettings "1" o-- "*" LoraEntry : loras
 
@@ -288,7 +331,13 @@ classDiagram
     Wd14TaggerRunner ..> Wd14TaggerConfig : uses
     Wd14TaggerRunner --> Messages : uses
 
-    CaptioningService --> Wd14TaggerRunner : uses
+    WdV3TimmTaggerRunner --> IWdV3TimmProcessClient : uses
+    WdV3TimmTaggerRunner --> ConfigLoader : uses
+    WdV3TimmTaggerRunner ..> WdV3TimmConfig : uses
+    WdV3TimmTaggerRunner --> Messages : uses
+    WdV3TimmProcessClient --> Messages : uses
+
+    CaptioningService --> ITaggerRunner : uses
     CaptioningService ..> CaptioningProgress : reports
     CaptioningService --> Messages : uses
     CaptioningProgress "1" *-- "1" CaptioningResult : result

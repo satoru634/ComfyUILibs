@@ -103,11 +103,23 @@
   <data name="ConfigLoader_LoraEntryEmpty_Format" xml:space="preserve"><value>'loras[{0}]' は空でない文字列である必要があります</value></data>
   <data name="ConfigLoader_PositivePromptTooLong_Format" xml:space="preserve"><value>'prompts.positive' が長すぎます（最大 {0} 文字）</value></data>
   <data name="ConfigLoader_NegativePromptTooLong_Format" xml:space="preserve"><value>'prompts.negative' が長すぎます（最大 {0} 文字）</value></data>
+  <data name="ConfigLoader_WdV3TimmSectionMissing" xml:space="preserve"><value>workflow_config.json に 'wdv3_timm' キーがありません</value></data>
+  <data name="ConfigLoader_WdV3TimmExePathEmpty" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.exe_path' は空でない文字列である必要があります</value></data>
+  <data name="ConfigLoader_WdV3TimmModelInvalid_Format" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.model' は次のいずれかである必要があります: {0}</value></data>
+  <data name="ConfigLoader_WdV3TimmThresholdKeyMissing_Format" xml:space="preserve"><value>workflow_config.json に 'wdv3_timm.{0}' キーがありません</value></data>
+  <data name="ConfigLoader_WdV3TimmThresholdOutOfRange_Format" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.{0}' は 0.0〜1.0 の範囲で指定してください（指定値: {1}）</value></data>
 
   <!-- Wd14TaggerRunner -->
   <data name="Wd14TaggerRunner_TemplateFileNotFound" xml:space="preserve"><value>WD14 Tagger テンプレートファイルが見つかりません</value></data>
   <data name="Wd14TaggerRunner_TemplateParseFailed" xml:space="preserve"><value>WD14 Tagger テンプレートの解析に失敗しました</value></data>
   <data name="Wd14TaggerRunner_OutputNotFound" xml:space="preserve"><value>WD Timm Tagger の出力が取得できませんでした</value></data>
+
+  <!-- WdV3TimmTaggerRunner -->
+  <data name="WdV3TimmTaggerRunner_ProcessStartFailed_Format" xml:space="preserve"><value>wdv3-timm プロセスの起動に失敗しました: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ProcessNotReady_Format" xml:space="preserve"><value>wdv3-timm プロセスが準備完了状態になりませんでした: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ProcessExited" xml:space="preserve"><value>タグ取得中に wdv3-timm プロセスが予期せず終了しました</value></data>
+  <data name="WdV3TimmTaggerRunner_ResponseParseFailed_Format" xml:space="preserve"><value>wdv3-timm からの応答の解析に失敗しました: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ServerError_Format" xml:space="preserve"><value>wdv3-timm がエラーを返しました: {0}</value></data>
 
   <!-- CaptioningService -->
   <data name="CaptioningService_DirectoryNotFound_Format" xml:space="preserve"><value>指定ディレクトリが存在しません: {0}</value></data>
