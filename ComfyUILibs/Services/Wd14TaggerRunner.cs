@@ -11,7 +11,7 @@ namespace ComfyUILibs.Services
     /// WD14 Tagger ワークフローを ComfyUI で実行し、画像のタグ（カンマ区切り文字列）を取得するクラス。
     /// Python 版の wd14_tagger_runner.py を移植したもの。
     /// </summary>
-    public class Wd14TaggerRunner
+    public class Wd14TaggerRunner : ITaggerRunner
     {
         /// <summary>テンプレート内の画像読み込みノードのタイトル。</summary>
         private const string LoadImageTitle = "画像を読み込む";

@@ -12,6 +12,20 @@ namespace ComfyUILibsTests.Services
         public void Report(T value) => Reports.Add(value);
     }
 
+    /// <summary>
+    /// Wd14TaggerRunner を経由せず、ITaggerRunner を直接実装するテスト用スタブ。
+    /// CaptioningService が ITaggerRunner 抽象のみに依存していることを検証するために使用する。
+    /// </summary>
+    internal class FakeTaggerRunner : ITaggerRunner
+    {
+        public IReadOnlyList<string> PrependTags { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> ExcludeTags { get; init; } = Array.Empty<string>();
+        public string Tags { get; set; } = "1girl, solo";
+
+        public Task<string> TagAsync(byte[] imageData, string filename = "image.png")
+            => Task.FromResult(Tags);
+    }
+
     public class CaptioningServiceTests : IDisposable
     {
         private readonly string _tempDir;
@@ -247,6 +261,22 @@ namespace ComfyUILibsTests.Services
             Assert.Equal(2, progress.Reports[0].Total);
             Assert.Equal(CaptioningResult.Processed, progress.Reports[0].Result);
             Assert.Equal(2, progress.Reports[1].Current);
+        }
+
+        // ── ITaggerRunner 抽象（Wd14TaggerRunner 以外の実装との組み合わせ） ──
+
+        [Fact]
+        public async Task ProcessDirectoryAsync_WithNonWd14TaggerRunnerImplementation_Works()
+        {
+            var dir = CreateImageDir();
+            File.WriteAllBytes(Path.Combine(dir, "photo.jpg"), new byte[] { 1 });
+            var fakeRunner = new FakeTaggerRunner { Tags = "1girl, solo" };
+            var service = new CaptioningService(fakeRunner);
+
+            var (processed, skipped, errors) = await service.ProcessDirectoryAsync(dir, recursive: false, overwrite: false);
+
+            Assert.Equal((1, 0, 0), (processed, skipped, errors));
+            Assert.Equal("1girl, solo", await File.ReadAllTextAsync(Path.Combine(dir, "photo.txt")));
         }
 
         // ── GenerateReportAsync ──────────────────────────────────────────

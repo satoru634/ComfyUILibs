@@ -103,11 +103,23 @@
   <data name="ConfigLoader_LoraEntryEmpty_Format" xml:space="preserve"><value>'loras[{0}]' must be a non-empty string</value></data>
   <data name="ConfigLoader_PositivePromptTooLong_Format" xml:space="preserve"><value>'prompts.positive' is too long (maximum {0} characters)</value></data>
   <data name="ConfigLoader_NegativePromptTooLong_Format" xml:space="preserve"><value>'prompts.negative' is too long (maximum {0} characters)</value></data>
+  <data name="ConfigLoader_WdV3TimmSectionMissing" xml:space="preserve"><value>workflow_config.json is missing the 'wdv3_timm' key</value></data>
+  <data name="ConfigLoader_WdV3TimmExePathEmpty" xml:space="preserve"><value>workflow_config.json 'wdv3_timm.exe_path' must be a non-empty string</value></data>
+  <data name="ConfigLoader_WdV3TimmModelInvalid_Format" xml:space="preserve"><value>workflow_config.json 'wdv3_timm.model' must be one of: {0}</value></data>
+  <data name="ConfigLoader_WdV3TimmThresholdKeyMissing_Format" xml:space="preserve"><value>workflow_config.json is missing the 'wdv3_timm.{0}' key</value></data>
+  <data name="ConfigLoader_WdV3TimmThresholdOutOfRange_Format" xml:space="preserve"><value>workflow_config.json 'wdv3_timm.{0}' must be between 0.0 and 1.0 (given: {1})</value></data>
 
   <!-- Wd14TaggerRunner -->
   <data name="Wd14TaggerRunner_TemplateFileNotFound" xml:space="preserve"><value>WD14 Tagger template file not found</value></data>
   <data name="Wd14TaggerRunner_TemplateParseFailed" xml:space="preserve"><value>Failed to parse the WD14 Tagger template</value></data>
   <data name="Wd14TaggerRunner_OutputNotFound" xml:space="preserve"><value>Failed to retrieve output from WD Timm Tagger</value></data>
+
+  <!-- WdV3TimmTaggerRunner -->
+  <data name="WdV3TimmTaggerRunner_ProcessStartFailed_Format" xml:space="preserve"><value>Failed to start the wdv3-timm process: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ProcessNotReady_Format" xml:space="preserve"><value>The wdv3-timm process did not become ready: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ProcessExited" xml:space="preserve"><value>The wdv3-timm process exited unexpectedly while retrieving tags</value></data>
+  <data name="WdV3TimmTaggerRunner_ResponseParseFailed_Format" xml:space="preserve"><value>Failed to parse the response from wdv3-timm: {0}</value></data>
+  <data name="WdV3TimmTaggerRunner_ServerError_Format" xml:space="preserve"><value>wdv3-timm returned an error: {0}</value></data>
 
   <!-- CaptioningService -->
   <data name="CaptioningService_DirectoryNotFound_Format" xml:space="preserve"><value>The specified directory does not exist: {0}</value></data>

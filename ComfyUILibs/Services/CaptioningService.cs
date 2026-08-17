@@ -7,7 +7,7 @@ using ComfyUILibs.Resources;
 namespace ComfyUILibs.Services
 {
     /// <summary>
-    /// ディレクトリ内の画像を <see cref="Wd14TaggerRunner"/> で一括タグ付けし、
+    /// ディレクトリ内の画像を <see cref="ITaggerRunner"/> 実装で一括タグ付けし、
     /// 同名の .txt キャプションファイルを生成するクラス。
     /// Python 版 captioning_tool.py の CaptioningTool クラスを移植したもの。
     /// </summary>
@@ -19,21 +19,23 @@ namespace ComfyUILibs.Services
         /// <summary>タグ集計レポートの出力ファイル名。集計対象からも除外する。</summary>
         public const string ReportFileName = "tags_report.txt";
 
-        private readonly Wd14TaggerRunner _taggerRunner;
+        private readonly ITaggerRunner _taggerRunner;
         private readonly IReadOnlyList<string> _prependTags;
         private readonly IReadOnlyList<string> _excludeTags;
 
         /// <summary>
-        /// タグ付け実行に使用する <see cref="Wd14TaggerRunner"/> と、フィルタに使用する
+        /// タグ付け実行に使用する <see cref="ITaggerRunner"/> と、フィルタに使用する
         /// prepend/exclude タグを受け取って初期化する。
         /// prepend_tags/exclude_tags（設定ファイル由来）と、GUI 等の追加指定タグとの union は
         /// 呼び出し側で解決してから渡すこと（本クラスは設定ファイルを読み込まない）。
         /// </summary>
-        /// <param name="taggerRunner">画像 1 枚のタグ取得に使用するランナー。</param>
+        /// <param name="taggerRunner">画像 1 枚のタグ取得に使用するランナー
+        /// （ComfyUI 経由の <see cref="Wd14TaggerRunner"/>、ローカルプロセス経由の
+        /// <see cref="WdV3TimmTaggerRunner"/> 等、<see cref="ITaggerRunner"/> の実装であれば差し替え可能）。</param>
         /// <param name="prependTags">全画像の冒頭に挿入するタグ。</param>
         /// <param name="excludeTags">全画像から除去するタグ（完全一致・大文字小文字無視）。</param>
         public CaptioningService(
-            Wd14TaggerRunner taggerRunner,
+            ITaggerRunner taggerRunner,
             IReadOnlyList<string>? prependTags = null,
             IReadOnlyList<string>? excludeTags = null)
         {

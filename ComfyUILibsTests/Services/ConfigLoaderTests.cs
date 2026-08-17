@@ -270,6 +270,138 @@ namespace ComfyUILibsTests.Services
                 ConfigLoader.ValidateWd14TaggerConfig(config));
         }
 
+        // ── ValidateWdV3TimmConfig ────────────────────────────────────────────
+
+        private static WdV3TimmConfig ValidWdV3TimmConfig() => new()
+        {
+            ExePath = @"E:\Python_project\wdv3-timm\wdv3_timm.exe",
+            Model = "vit",
+            GeneralThreshold = 0.35,
+            CharacterThreshold = 0.75,
+        };
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_Valid_DoesNotThrow()
+        {
+            var config = new WorkflowConfig { WdV3Timm = ValidWdV3TimmConfig() };
+
+            ConfigLoader.ValidateWdV3TimmConfig(config);
+        }
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_MissingSection_ThrowsComfyUIException()
+        {
+            var config = new WorkflowConfig();
+
+            var ex = Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.ValidateWdV3TimmConfig(config));
+            Assert.Contains("wdv3_timm", ex.Message);
+        }
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_EmptyExePath_ThrowsComfyUIException()
+        {
+            var wdv3 = ValidWdV3TimmConfig();
+            wdv3.ExePath = "";
+            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+
+            var ex = Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.ValidateWdV3TimmConfig(config));
+            Assert.Contains("exe_path", ex.Message);
+        }
+
+        [Theory]
+        [InlineData("vit")]
+        [InlineData("swinv2")]
+        [InlineData("convnext")]
+        [InlineData("eva02")]
+        [InlineData("vit-large")]
+        public void ValidateWdV3TimmConfig_KnownModel_DoesNotThrow(string model)
+        {
+            var wdv3 = ValidWdV3TimmConfig();
+            wdv3.Model = model;
+            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+
+            ConfigLoader.ValidateWdV3TimmConfig(config);
+        }
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_UnknownModel_ThrowsComfyUIException()
+        {
+            var wdv3 = ValidWdV3TimmConfig();
+            wdv3.Model = "unknown-model";
+            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+
+            var ex = Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.ValidateWdV3TimmConfig(config));
+            Assert.Contains("model", ex.Message);
+        }
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_ThresholdKeyMissing_ThrowsComfyUIException()
+        {
+            var wdv3 = ValidWdV3TimmConfig();
+            wdv3.GeneralThreshold = null;
+            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+
+            var ex = Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.ValidateWdV3TimmConfig(config));
+            Assert.Contains("general_threshold", ex.Message);
+        }
+
+        [Fact]
+        public void ValidateWdV3TimmConfig_ThresholdOutOfRange_ThrowsComfyUIException()
+        {
+            var wdv3 = ValidWdV3TimmConfig();
+            wdv3.CharacterThreshold = 1.5;
+            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+
+            Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.ValidateWdV3TimmConfig(config));
+        }
+
+        // ── LoadWdV3TimmConfig ────────────────────────────────────────────────
+
+        [Fact]
+        public void LoadWdV3TimmConfig_ValidFile_ReturnsWdV3TimmSection()
+        {
+            var json = """
+                {
+                  "wdv3_timm": {
+                    "exe_path": "E:\\Python_project\\wdv3-timm\\wdv3_timm.exe",
+                    "model": "vit",
+                    "general_threshold": 0.35,
+                    "character_threshold": 0.75
+                  }
+                }
+                """;
+            var path = WriteTempFile("workflow_config.json", json);
+
+            var config = ConfigLoader.LoadWdV3TimmConfig(path);
+
+            Assert.NotNull(config.WdV3Timm);
+            Assert.Equal("vit", config.WdV3Timm!.Model);
+        }
+
+        [Fact]
+        public void LoadWdV3TimmConfig_NoComfyuiUrlKey_DoesNotThrow()
+        {
+            // wdv3-timm は ComfyUI を経由しないため comfyui_url は不要
+            var path = WriteTempFile("workflow_config.json", """{"wdv3_timm": {"model": "vit"}}""");
+
+            var config = ConfigLoader.LoadWdV3TimmConfig(path);
+
+            Assert.Null(config.ComfyuiUrl);
+        }
+
+        [Fact]
+        public void LoadWdV3TimmConfig_FileNotFound_ThrowsComfyUIException()
+        {
+            var ex = Assert.Throws<ComfyUIException>(() =>
+                ConfigLoader.LoadWdV3TimmConfig(Path.Combine(_tempDir, "missing.json")));
+            Assert.Equal(Messages.Get("ConfigLoader_ConfigFileNotFound"), ex.Message);
+        }
+
         // ── LoadAndValidateInput ──────────────────────────────────────────────
 
         [Fact]

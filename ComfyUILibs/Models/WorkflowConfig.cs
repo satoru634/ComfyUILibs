@@ -74,6 +74,30 @@ namespace ComfyUILibs.Models
     }
 
     /// <summary>
+    /// workflow_config.json の wdv3_timm セクションに対応する wdv3-timm（ローカルプロセス版
+    /// WD Tagger V3）の設定。<see cref="WdV3TimmTaggerRunner"/> から参照される。
+    /// ComfyUI を経由せず、ローカルの wdv3_timm.exe（常駐サーバーモード）を起動して利用する。
+    /// </summary>
+    public class WdV3TimmConfig
+    {
+        /// <summary>wdv3_timm.exe（または launcher）の実行ファイルパス。</summary>
+        [JsonPropertyName("exe_path")]
+        public string? ExePath { get; set; }
+
+        /// <summary>使用するモデル名（vit / swinv2 / convnext / eva02 / vit-large のいずれか）。</summary>
+        [JsonPropertyName("model")]
+        public string? Model { get; set; }
+
+        /// <summary>一般タグを出力するしきい値（0.0〜1.0）。null の場合はキーが存在しないことを示す。</summary>
+        [JsonPropertyName("general_threshold")]
+        public double? GeneralThreshold { get; set; }
+
+        /// <summary>キャラクタータグを出力するしきい値（0.0〜1.0）。null の場合はキーが存在しないことを示す。</summary>
+        [JsonPropertyName("character_threshold")]
+        public double? CharacterThreshold { get; set; }
+    }
+
+    /// <summary>
     /// workflow_config.json 全体に対応するルートオブジェクト。
     /// <see cref="ConfigLoader.LoadConfig"/> でファイルから読み込まれバリデーションされる。
     /// </summary>
@@ -94,6 +118,11 @@ namespace ComfyUILibs.Models
         /// <summary>WD Timm Tagger の設定。このセクションが存在する場合のみ <see cref="Wd14TaggerRunner"/> が利用できる。</summary>
         [JsonPropertyName("wd14_tagger")]
         public Wd14TaggerConfig? Wd14Tagger { get; set; }
+
+        /// <summary>wdv3-timm（ローカルプロセス版）の設定。このセクションが存在する場合のみ
+        /// <see cref="WdV3TimmTaggerRunner"/> が利用できる。</summary>
+        [JsonPropertyName("wdv3_timm")]
+        public WdV3TimmConfig? WdV3Timm { get; set; }
 
         /// <summary>全画像に共通で先頭追加するタグ。キー自体が存在しない場合は null。</summary>
         [JsonPropertyName("prepend_tags")]
