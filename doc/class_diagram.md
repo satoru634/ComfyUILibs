@@ -99,19 +99,11 @@ classDiagram
         +double? CharacterThreshold
     }
 
-    class WdV3TimmConfig {
-        +string? ExePath
-        +string? Model
-        +double? GeneralThreshold
-        +double? CharacterThreshold
-    }
-
     class WorkflowConfig {
         +string? ComfyuiUrl
         +string? DefaultWorkflow
         +Dictionary~string,WorkflowSettings~? Workflows
         +Wd14TaggerConfig? Wd14Tagger
-        +WdV3TimmConfig? WdV3Timm
         +List~string~? PrependTags
         +List~string~? ExcludeTags
     }
@@ -258,6 +250,19 @@ classDiagram
         +DisposeAsync() ValueTask
     }
 
+    class WdV3TimmModelMap {
+        <<static>>
+        +TryGetWdV3TimmModel(string, out string) bool
+        +IReadOnlyCollection~string~ SupportedWdV3TimmModels
+        +IReadOnlyCollection~string~ SupportedWd14ModelNames
+    }
+
+    class WdV3TimmPaths {
+        <<static>>
+        +string RootDirectory
+        +string ExeFilePath
+    }
+
     class WdV3TimmTaggerRunner {
         -IWdV3TimmProcessClient _processClient
         -bool _started
@@ -305,7 +310,6 @@ classDiagram
 
     WorkflowConfig "1" *-- "*" WorkflowSettings : workflows
     WorkflowConfig "1" o-- "0..1" Wd14TaggerConfig : wd14_tagger
-    WorkflowConfig "1" o-- "0..1" WdV3TimmConfig : wdv3_timm
     WorkflowSettings "1" o-- "0..1" ImageSize : defaultImageSize
     WorkflowSettings "1" o-- "*" LoraEntry : loras
 
@@ -333,9 +337,12 @@ classDiagram
 
     WdV3TimmTaggerRunner --> IWdV3TimmProcessClient : uses
     WdV3TimmTaggerRunner --> ConfigLoader : uses
-    WdV3TimmTaggerRunner ..> WdV3TimmConfig : uses
+    WdV3TimmTaggerRunner --> WdV3TimmModelMap : uses
+    WdV3TimmTaggerRunner --> WdV3TimmPaths : uses
+    WdV3TimmTaggerRunner ..> Wd14TaggerConfig : uses
     WdV3TimmTaggerRunner --> Messages : uses
     WdV3TimmProcessClient --> Messages : uses
+    ConfigLoader --> WdV3TimmModelMap : uses
 
     CaptioningService --> ITaggerRunner : uses
     CaptioningService ..> CaptioningProgress : reports

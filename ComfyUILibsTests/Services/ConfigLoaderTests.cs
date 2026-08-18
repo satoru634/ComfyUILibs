@@ -271,11 +271,13 @@ namespace ComfyUILibsTests.Services
         }
 
         // ── ValidateWdV3TimmConfig ────────────────────────────────────────────
+        // wdv3-timm はモデル名・しきい値・実行ファイルパスを自身では持たず wd14_tagger セクションを
+        // 共用する（実行ファイルパスは captioning_config.json では扱わず WdV3TimmPaths の固定パスを使う）
+        // ため、有効な設定は WdV3TimmModelMap で変換可能な model_name を持つ wd14_tagger セクションのみ。
 
-        private static WdV3TimmConfig ValidWdV3TimmConfig() => new()
+        private static Wd14TaggerConfig ValidWd14TaggerConfigForWdV3Timm() => new()
         {
-            ExePath = @"E:\Python_project\wdv3-timm\wdv3_timm.exe",
-            Model = "vit",
+            ModelName = "wd-vit-tagger-v3",
             GeneralThreshold = 0.35,
             CharacterThreshold = 0.75,
         };
@@ -283,66 +285,54 @@ namespace ComfyUILibsTests.Services
         [Fact]
         public void ValidateWdV3TimmConfig_Valid_DoesNotThrow()
         {
-            var config = new WorkflowConfig { WdV3Timm = ValidWdV3TimmConfig() };
+            var config = new WorkflowConfig { Wd14Tagger = ValidWd14TaggerConfigForWdV3Timm() };
 
             ConfigLoader.ValidateWdV3TimmConfig(config);
         }
 
         [Fact]
-        public void ValidateWdV3TimmConfig_MissingSection_ThrowsComfyUIException()
+        public void ValidateWdV3TimmConfig_MissingWd14TaggerSection_ThrowsComfyUIException()
         {
             var config = new WorkflowConfig();
 
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.ValidateWdV3TimmConfig(config));
-            Assert.Contains("wdv3_timm", ex.Message);
-        }
-
-        [Fact]
-        public void ValidateWdV3TimmConfig_EmptyExePath_ThrowsComfyUIException()
-        {
-            var wdv3 = ValidWdV3TimmConfig();
-            wdv3.ExePath = "";
-            var config = new WorkflowConfig { WdV3Timm = wdv3 };
-
-            var ex = Assert.Throws<ComfyUIException>(() =>
-                ConfigLoader.ValidateWdV3TimmConfig(config));
-            Assert.Contains("exe_path", ex.Message);
+            Assert.Contains("wd14_tagger", ex.Message);
         }
 
         [Theory]
-        [InlineData("vit")]
-        [InlineData("swinv2")]
-        [InlineData("convnext")]
-        [InlineData("eva02")]
-        [InlineData("vit-large")]
-        public void ValidateWdV3TimmConfig_KnownModel_DoesNotThrow(string model)
+        [InlineData("wd-vit-tagger-v3")]
+        [InlineData("wd-swinv2-tagger-v3")]
+        [InlineData("wd-convnext-tagger-v3")]
+        [InlineData("wd-eva02-large-tagger-v3")]
+        [InlineData("wd-vit-large-tagger-v3")]
+        public void ValidateWdV3TimmConfig_KnownWd14ModelName_DoesNotThrow(string modelName)
         {
-            var wdv3 = ValidWdV3TimmConfig();
-            wdv3.Model = model;
-            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+            var wd14 = ValidWd14TaggerConfigForWdV3Timm();
+            wd14.ModelName = modelName;
+            var config = new WorkflowConfig { Wd14Tagger = wd14 };
 
             ConfigLoader.ValidateWdV3TimmConfig(config);
         }
 
         [Fact]
-        public void ValidateWdV3TimmConfig_UnknownModel_ThrowsComfyUIException()
+        public void ValidateWdV3TimmConfig_UnmappedWd14ModelName_ThrowsComfyUIException()
         {
-            var wdv3 = ValidWdV3TimmConfig();
-            wdv3.Model = "unknown-model";
-            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+            var wd14 = ValidWd14TaggerConfigForWdV3Timm();
+            wd14.ModelName = "wd-v1-4-moat-tagger-v2";
+            var config = new WorkflowConfig { Wd14Tagger = wd14 };
 
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.ValidateWdV3TimmConfig(config));
-            Assert.Contains("model", ex.Message);
+            Assert.Contains("wd-v1-4-moat-tagger-v2", ex.Message);
         }
 
         [Fact]
-        public void ValidateWdV3TimmConfig_ThresholdKeyMissing_ThrowsComfyUIException()
+        public void ValidateWdV3TimmConfig_Wd14ThresholdKeyMissing_ThrowsComfyUIException()
         {
-            var wdv3 = ValidWdV3TimmConfig();
-            wdv3.GeneralThreshold = null;
-            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+            var wd14 = ValidWd14TaggerConfigForWdV3Timm();
+            wd14.GeneralThreshold = null;
+            var config = new WorkflowConfig { Wd14Tagger = wd14 };
 
             var ex = Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.ValidateWdV3TimmConfig(config));
@@ -350,11 +340,11 @@ namespace ComfyUILibsTests.Services
         }
 
         [Fact]
-        public void ValidateWdV3TimmConfig_ThresholdOutOfRange_ThrowsComfyUIException()
+        public void ValidateWdV3TimmConfig_Wd14ThresholdOutOfRange_ThrowsComfyUIException()
         {
-            var wdv3 = ValidWdV3TimmConfig();
-            wdv3.CharacterThreshold = 1.5;
-            var config = new WorkflowConfig { WdV3Timm = wdv3 };
+            var wd14 = ValidWd14TaggerConfigForWdV3Timm();
+            wd14.CharacterThreshold = 1.5;
+            var config = new WorkflowConfig { Wd14Tagger = wd14 };
 
             Assert.Throws<ComfyUIException>(() =>
                 ConfigLoader.ValidateWdV3TimmConfig(config));
@@ -363,13 +353,12 @@ namespace ComfyUILibsTests.Services
         // ── LoadWdV3TimmConfig ────────────────────────────────────────────────
 
         [Fact]
-        public void LoadWdV3TimmConfig_ValidFile_ReturnsWdV3TimmSection()
+        public void LoadWdV3TimmConfig_ValidFile_ReturnsWd14TaggerSection()
         {
             var json = """
                 {
-                  "wdv3_timm": {
-                    "exe_path": "E:\\Python_project\\wdv3-timm\\wdv3_timm.exe",
-                    "model": "vit",
+                  "wd14_tagger": {
+                    "model_name": "wd-vit-tagger-v3",
                     "general_threshold": 0.35,
                     "character_threshold": 0.75
                   }
@@ -379,15 +368,15 @@ namespace ComfyUILibsTests.Services
 
             var config = ConfigLoader.LoadWdV3TimmConfig(path);
 
-            Assert.NotNull(config.WdV3Timm);
-            Assert.Equal("vit", config.WdV3Timm!.Model);
+            Assert.NotNull(config.Wd14Tagger);
+            Assert.Equal("wd-vit-tagger-v3", config.Wd14Tagger!.ModelName);
         }
 
         [Fact]
         public void LoadWdV3TimmConfig_NoComfyuiUrlKey_DoesNotThrow()
         {
             // wdv3-timm は ComfyUI を経由しないため comfyui_url は不要
-            var path = WriteTempFile("workflow_config.json", """{"wdv3_timm": {"model": "vit"}}""");
+            var path = WriteTempFile("workflow_config.json", """{"wd14_tagger": {"model_name": "wd-vit-tagger-v3"}}""");
 
             var config = ConfigLoader.LoadWdV3TimmConfig(path);
 
