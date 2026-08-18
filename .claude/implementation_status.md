@@ -126,6 +126,42 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/本ファイルを更新
 - **本フェーズのスコープ外**: wdv3-timm リポジトリ（`E:\Python_project\wdv3-timm`）側の `--serve` 常駐サーバーモード実装は別タスク（プロトコル契約は上記の通り本フェーズで確定済み）。利用側プロジェクト（ComfyUICaptioningTool）の GUI 配線（バックエンド選択 UI・`ConfigPage` への `wdv3_timm` セクション編集追加等）も別タスク
 
+## フェーズ8: wdv3_timm セクションの wd14_tagger 共用化（`fix/wdv3-timm-use-wd14-model-settings` ブランチ、実装完了）
+
+利用側プロジェクト（ComfyUICaptioningTool）の `ConfigPage` に `wdv3_timm` セクション（`exe_path`/`model`/`general_threshold`/`character_threshold`）の編集 UI を実装した際、ComfyUI 版（`wd14_tagger`）とローカル版（`wdv3_timm`）のモデル名・しきい値を別々に管理する形になっていた。設定が二重管理でずれるリスクがあるとのユーザー指摘を受け、`wdv3_timm` セクションはモデル名・しきい値を持たず `wd14_tagger` セクションを共用する設計に変更した。ComfyUI と wdv3-timm ではモデル名の付け方が異なる（wd14_tagger 側は Hugging Face リポジトリ名そのまま、wdv3-timm 側は `wdv3_timm.py` の `MODEL_REPO_MAP` の短縮キー）ため、対応表（`WdV3TimmModelMap`）を新設して変換する。
+
+- [x] `Models/WorkflowConfig.cs` — `WdV3TimmConfig` から `Model`/`GeneralThreshold`/`CharacterThreshold` を削除し `ExePath` のみを残した
+- [x] `Services/WdV3TimmModelMap.cs`（新設） — `wd14_tagger.model_name` → wdv3-timm の `--model` 値の対応表を持つ静的クラス。`TryGetWdV3TimmModel(string, out string)`・`SupportedWdV3TimmModels`（エラーメッセージ表示用）・`SupportedWd14ModelNames`（`wd14_tagger.model_name` 側の一覧。利用側 GUI の `ConfigPage` モデル名選択 ComboBox が参照する想定で追加）を公開する
+  | `wd14_tagger.model_name` | wdv3-timm `--model` |
+  |---|---|
+  | `wd-vit-tagger-v3` | `vit` |
+  | `wd-swinv2-tagger-v3` | `swinv2` |
+  | `wd-convnext-tagger-v3` | `convnext` |
+  | `wd-eva02-large-tagger-v3` | `eva02` |
+  | `wd-vit-large-tagger-v3` | `vit-large` |
+- [x] `Services/ConfigLoader.cs` の `ValidateWdV3TimmConfig` を書き換え。`wdv3_timm.exe_path` の検証に加え、`ValidateWd14TaggerConfig(config)` を呼び出して `wd14_tagger` セクション自体の妥当性（存在・model_name 非空・しきい値範囲）を検証し、さらに `wd14_tagger.model_name` が `WdV3TimmModelMap` で変換可能であることを検証する。旧 `WdV3TimmModelChoices`/`ValidateWdV3TimmThreshold` は不要になったため削除した
+- [x] `Services/WdV3TimmTaggerRunner.cs` の `EnsureStartedAsync` を変更。`--model`/`-g`/`-c` の各引数を `_config.WdV3Timm` ではなく `_config.Wd14Tagger`（`WdV3TimmModelMap.TryGetWdV3TimmModel` で変換したモデル名）から組み立てるようにした
+- [x] `Resources/Messages.resx`/`Messages.en.resx` — `ConfigLoader_WdV3TimmModelInvalid_Format`/`ConfigLoader_WdV3TimmThresholdKeyMissing_Format`/`ConfigLoader_WdV3TimmThresholdOutOfRange_Format`（不要になったため削除）の代わりに `ConfigLoader_WdV3TimmModelNameNotMapped_Format` を追加
+- [x] `ComfyUILibsTests/Services/WdV3TimmModelMapTests.cs`（新設、9件） — 5モデルの変換・大文字小文字無視・未知モデル名時の `false`/`null`・`SupportedWdV3TimmModels`/`SupportedWd14ModelNames` の内容を検証
+- [x] `ComfyUILibsTests/Services/ConfigLoaderTests.cs` の `ValidateWdV3TimmConfig`/`LoadWdV3TimmConfig` 関連テストを新設計に合わせて全面書き換え（wd14_tagger セクション必須化・モデル名対応表・しきい値は wd14_tagger 側のものを検証）
+- [x] `ComfyUILibsTests/Services/WdV3TimmTaggerRunnerTests.cs` の `CreateConfig()` ヘルパーを `Wd14Tagger` セクション付きに変更し、`wd14_tagger` セクション欠落・モデル名未対応時にコンストラクターが例外を送出することを検証するテストを追加
+- 全件パス確認済み（`ComfyUILibsTests.exe` 直接実行で確認。218件 → 230件）
+- `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/本ファイルを更新
+- **本フェーズのスコープ外**: 利用側プロジェクト（ComfyUICaptioningTool）の `ConfigPage`/`ConfigViewModel` 側の対応（`wdv3_timm.model`/`general_threshold`/`character_threshold` 編集項目の削除、`wd14_tagger` セクションとの依存関係の反映）は別タスク
+
+**追加修正（ユーザー指示「wdv3_timm.exe の実行ファイルパスは、ツールの同階層固定としてください。その代わり、venv と exe のビルドを自動的に行うボタンを追加してください。」を受けたもの、同一ブランチ内）**: `wdv3_timm` セクション（`exe_path` のみになっていた）自体を廃止し、実行ファイルパスは利用側アプリの実行ファイルと同じ階層に固定する方式に変更した。
+
+- [x] `Models/WorkflowConfig.cs` — `WdV3TimmConfig` クラスと `WorkflowConfig.WdV3Timm`（JSON キー `wdv3_timm`）プロパティを削除。`Wd14TaggerConfig` の XML ドキュメントコメントに、`WdV3TimmTaggerRunner`（wdv3_timm.exe は `Services.WdV3TimmPaths` の固定パスから起動する）もこのセクションを共用する旨を追記した
+- [x] `Services/WdV3TimmPaths.cs`（新設） — 固定パス規約を集約する静的クラス。`RootDirectory => Path.Combine(AppContext.BaseDirectory, "wdv3-timm")`・`ExeFilePath => Path.Combine(RootDirectory, "wdv3_timm.exe")`（`wdv3-timm` リポジトリ自体のフォルダ構成が `wdv3_timm.exe` を `.venv`/`wdv3_timm.py` と同階層に置く前提のため、`wdv3-timm/` サブフォルダごと固定した）
+- [x] `Services/WdV3TimmTaggerRunner.cs` — `EnsureStartedAsync` が `_processClient.StartAsync` に渡す実行ファイルパスを、config 由来の値ではなく `WdV3TimmPaths.ExeFilePath` に変更。実行ファイル未配置時の専用エラーチェックは追加せず、既存の `WdV3TimmProcessClient.StartAsync` 内の `Win32Exception` → `ComfyUIException` ラップ（プロセス起動失敗時の既存経路）にそのまま委ねる設計とした（`AppContext.BaseDirectory` はプロセス全体で共有されるため、テスト時に実ファイルを置く固定パスを用意するとテストクラス間で干渉するリスクがあり、それを避けるための判断）
+- [x] `Services/ConfigLoader.cs` — `ValidateWdV3TimmConfig` から `exe_path` の検証を削除し、`ValidateWd14TaggerConfig` + `WdV3TimmModelMap.TryGetWdV3TimmModel` によるモデル名マッピング検証のみに簡素化した
+- [x] `Resources/Messages.resx`/`Messages.en.resx` — `ConfigLoader_WdV3TimmSectionMissing`/`ConfigLoader_WdV3TimmExePathEmpty` を削除（`ConfigLoader_WdV3TimmModelNameNotMapped_Format` は維持）
+- [x] `ComfyUILibsTests/Services/ConfigLoaderTests.cs`/`WdV3TimmTaggerRunnerTests.cs` を新設計に合わせて更新（`CreateConfig()` ヘルパーから `WdV3Timm` の設定を削除、`TagAsync_FirstCall_StartsProcessWithExpectedArguments` で `Assert.Equal(WdV3TimmPaths.ExeFilePath, fakeClient.StartedExePath)` を検証）
+- [x] `ComfyUILibsTests/Services/WdV3TimmModelMapTests.cs` に `SupportedWd14ModelNames_ContainsAllFiveModelNames` を追加
+- 227件、全件パス確認済み（`ComfyUILibsTests.exe` 直接実行で確認。テスト統廃合により230件から減少）
+- `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/本ファイル/`.claude/directory_structure.md` を更新
+- 本フェーズ・追加修正とも実装完了時点でコミットしていない（利用側 ComfyUICaptioningTool の指示「実装完了後はコミットしないでください」に合わせ、対となる本リポジトリ側の変更も未コミットのまま揃えている）
+
 ## テスト（ComfyUILibsTests）
 
 各クラスに対応するテストを `ComfyUILibsTests/<同じ名前空間>/` に配置済み。件数の内訳は `README.md` の「テスト」セクション参照（全パス）。

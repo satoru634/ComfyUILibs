@@ -68,7 +68,12 @@ ComfyUILibs/
     Wd14TaggerRunner.cs       # WD14 Tagger ワークフロー実行（ComfyUI 経由）
     IWdV3TimmProcessClient.cs # wdv3-timm 常駐サーバープロセスとの標準入出力通信の抽象化（DI / テスト用）
     WdV3TimmProcessClient.cs  # wdv3_timm.exe を --serve で常駐起動し JSON Lines で通信する既定実装
-    WdV3TimmTaggerRunner.cs   # wdv3-timm 常駐プロセス経由のタグ付け実行（ComfyUI 不要）
+    WdV3TimmModelMap.cs       # wd14_tagger.model_name ⇔ wdv3-timm --model の対応表
+    WdV3TimmPaths.cs          # wdv3_timm.exe の固定パス規約（利用側アプリの実行ファイルと
+                               # 同階層の wdv3-timm フォルダ）
+    WdV3TimmTaggerRunner.cs   # wdv3-timm 常駐プロセス経由のタグ付け実行（ComfyUI 不要、
+                               # モデル名・しきい値は wd14_tagger セクションを共用、
+                               # 実行ファイルパスは WdV3TimmPaths の固定パス）
     CaptioningService.cs      # ディレクトリ一括タグ付け・タグフィルタ・タグ集計レポート
     IPreviewImageCacheService.cs # プレビュー画像キャッシュのインターフェース（DI / テスト用）
     PreviewImageCacheService.cs  # 生成画像プレビューのローカルキャッシュ管理
@@ -104,12 +109,6 @@ ComfyUILibs/
     "general_threshold": 0.35,
     "character_threshold": 0.85
   },
-  "wdv3_timm": {
-    "exe_path": "E:\\Python_project\\wdv3-timm\\wdv3_timm.exe",
-    "model": "vit",
-    "general_threshold": 0.35,
-    "character_threshold": 0.75
-  },
   "prepend_tags": ["my_chara"],
   "exclude_tags": ["rating:general"]
 }
@@ -117,7 +116,17 @@ ComfyUILibs/
 
 `prepend_tags`/`exclude_tags` は `ITaggerRunner`（`Wd14TaggerRunner`/`WdV3TimmTaggerRunner`）の `PrependTags`/`ExcludeTags` プロパティ経由で参照できる（キー自体が存在しない場合は空リスト）。バリデーション対象ではなく、`CaptioningService` を呼び出す側（GUI 等）が追加指定値との union を解決してから利用する想定。
 
-`wd14_tagger`（ComfyUI 経由）と `wdv3_timm`（ローカルプロセス経由）は排他ではなく、使用するバックエンドに応じて必要な方のセクションのみを用意すればよい（`Wd14TaggerRunner`/`WdV3TimmTaggerRunner` はそれぞれ自分のセクションのみを検証する）。
+`WdV3TimmTaggerRunner` はモデル名・しきい値を自分では持たず、`wd14_tagger`（`model_name`/`general_threshold`/`character_threshold`）を共用する（ComfyUI 版と wdv3-timm 版で別々に管理すると設定がずれるため）。そのため利用するには有効な `wd14_tagger` セクションが必要。`wd14_tagger.model_name`（ComfyUI 側の Hugging Face リポジトリ名、例: `wd-eva02-large-tagger-v3`）は `WdV3TimmModelMap` で wdv3-timm 側の `--model` 値（例: `eva02`）に変換される。対応表は次のとおり:
+
+wdv3_timm.exe の実行ファイルパスは config ファイルでは指定しない。`WdV3TimmPaths.ExeFilePath`（利用側アプリの実行ファイルと同じ階層の `wdv3-timm\wdv3_timm.exe` 固定パス）を常に使用する。
+
+| `wd14_tagger.model_name` | wdv3-timm `--model` |
+|---|---|
+| `wd-vit-tagger-v3` | `vit` |
+| `wd-swinv2-tagger-v3` | `swinv2` |
+| `wd-convnext-tagger-v3` | `convnext` |
+| `wd-eva02-large-tagger-v3` | `eva02` |
+| `wd-vit-large-tagger-v3` | `vit-large` |
 
 ### バリデーションルール
 
@@ -130,9 +139,7 @@ ComfyUILibs/
 | `loras[*].file` | 空文字不可 |
 | `loras[*].strength` | 数値必須（キー欠落不可） |
 | `wd14_tagger.general_threshold` / `character_threshold` | 0.0〜1.0 |
-| `wdv3_timm.exe_path` | 必須・空文字不可 |
-| `wdv3_timm.model` | `vit` / `swinv2` / `convnext` / `eva02` / `vit-large` のいずれか |
-| `wdv3_timm.general_threshold` / `character_threshold` | 0.0〜1.0 |
+| （`WdV3TimmTaggerRunner` 利用時）`wd14_tagger` セクション | 上記 `wd14_tagger.*` のルールに加え、`model_name` が上記対応表に存在すること |
 
 ---
 
@@ -193,6 +200,12 @@ var tags = await tagger.TagAsync(imageData);
 ```
 
 ### wdv3-timm（ローカルプロセス経由、ComfyUI 不要）
+
+`WdV3TimmTaggerRunner` はモデル名・しきい値を自分では持たず `wd14_tagger` セクションを共用するため、
+`workflow_config.json` に `wd14_tagger`（`model_name` は `WdV3TimmModelMap` で変換できる値であること。
+上記「バリデーションルール」節の対応表を参照）を設定しておく必要がある。実行ファイル
+（`wdv3_timm.exe`）は `WdV3TimmPaths.ExeFilePath`（利用側アプリの実行ファイルと同じ階層の
+`wdv3-timm\wdv3_timm.exe`）から起動する固定パスのため、config ファイル側での指定は不要。
 
 ```csharp
 // WdV3TimmTaggerRunner — ローカルの wdv3_timm.exe を常駐サーバーモードで起動してタグ付けする。
@@ -325,21 +338,23 @@ dotnet test ComfyUILibs.sln
 |---|---|---|
 | `Base/ObservablePointTests.cs` | 10 | 座標変換・プロパティ変更通知 |
 | `Base/ObservableSizeTests.cs` | 10 | サイズ変換・プロパティ変更通知 |
+| `Ui/UIItemBaseModelTests.cs` | 17 | アイテムリスト管理（Init/Add/Clear）・選択インデックス |
 | `Common/JsonLoaderTests.cs` | 13 | JSON 読み書き・エラーハンドリング |
 | `Common/SettingTests.cs` | 9 | 設定の永続化・読み込み |
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException の構築・継承 |
-| `Services/ConfigLoaderTests.cs` | 52 | 正常系・異常系のバリデーション（wdv3_timm セクションを含む） |
+| `Services/ConfigLoaderTests.cs` | 48 | 正常系・異常系のバリデーション（WdV3TimmTaggerRunner はモデル名マッピングのみ検証、wdv3_timm セクション自体は廃止） |
 | `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
-| `Services/WorkflowBuilderTests.cs` | 18 | テンプレート選択・適用（filename_prefix 上書きを含む） |
+| `Services/WorkflowBuilderTests.cs` | 20 | テンプレート選択・適用（filename_prefix 上書きを含む） |
 | `Services/WorkflowRunnerTests.cs` | 13 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播を含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
-| `Services/WdV3TimmTaggerRunnerTests.cs` | 16 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・一時ファイル・応答解釈・DisposeAsync） |
+| `Services/WdV3TimmTaggerRunnerTests.cs` | 17 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・起動引数（WdV3TimmPaths.ExeFilePath 固定）・一時ファイル・応答解釈・DisposeAsync） |
+| `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model の対応表の変換・一覧取得・大文字小文字無視・未知モデル名の挙動 |
 | `Services/CaptioningServiceTests.cs` | 14 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート・ITaggerRunner 抽象の直接実装との組み合わせ |
-| `Services/PreviewImageCacheServiceTests.cs` | 12 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
+| `Services/PreviewImageCacheServiceTests.cs` | 11 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **218 件**
+合計: **227 件**
 
 ---
 

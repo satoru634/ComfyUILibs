@@ -68,7 +68,10 @@ ComfyUILibs/
     Wd14TaggerRunner.cs       # WD14 Tagger workflow execution (via ComfyUI)
     IWdV3TimmProcessClient.cs # Abstracts stdin/stdout communication with the wdv3-timm persistent process (for DI / testing)
     WdV3TimmProcessClient.cs  # Default implementation: launches wdv3_timm.exe with --serve and speaks JSON Lines
-    WdV3TimmTaggerRunner.cs   # Tagging via a local wdv3-timm persistent process (no ComfyUI required)
+    WdV3TimmModelMap.cs       # Maps wd14_tagger.model_name to wdv3-timm's --model value
+    WdV3TimmPaths.cs          # Fixed-path convention for wdv3_timm.exe (next to the consuming app's own executable)
+    WdV3TimmTaggerRunner.cs   # Tagging via a local wdv3-timm persistent process (no ComfyUI required;
+                               # model name and thresholds are shared with the wd14_tagger section)
     CaptioningService.cs      # Batch directory tagging, tag filters, tag frequency reports
     IPreviewImageCacheService.cs # Preview image cache interface (for DI / testing)
     PreviewImageCacheService.cs  # Local cache management for generated image previews
@@ -104,12 +107,6 @@ The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
     "general_threshold": 0.35,
     "character_threshold": 0.85
   },
-  "wdv3_timm": {
-    "exe_path": "E:\\Python_project\\wdv3-timm\\wdv3_timm.exe",
-    "model": "vit",
-    "general_threshold": 0.35,
-    "character_threshold": 0.75
-  },
   "prepend_tags": ["my_chara"],
   "exclude_tags": ["rating:general"]
 }
@@ -117,7 +114,15 @@ The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
 
 `prepend_tags`/`exclude_tags` are exposed via `ITaggerRunner` (`Wd14TaggerRunner`/`WdV3TimmTaggerRunner`)'s `PrependTags`/`ExcludeTags` properties (an empty list if the key itself is absent). They are not validated; the caller of `CaptioningService` (e.g. the GUI) is expected to resolve the union with any additional values before use.
 
-`wd14_tagger` (via ComfyUI) and `wdv3_timm` (via a local process) are not mutually exclusive — only include whichever section your chosen backend needs (`Wd14TaggerRunner`/`WdV3TimmTaggerRunner` each validate only their own section).
+`WdV3TimmTaggerRunner` does not carry its own model name or thresholds — it shares `wd14_tagger` (`model_name`/`general_threshold`/`character_threshold`) instead, so the two backends can't drift out of sync. This means using it requires a valid `wd14_tagger` section. `wd14_tagger.model_name` (the ComfyUI-side Hugging Face repo name, e.g. `wd-eva02-large-tagger-v3`) is translated to wdv3-timm's `--model` value (e.g. `eva02`) via `WdV3TimmModelMap`. The mapping:
+
+| `wd14_tagger.model_name` | wdv3-timm `--model` |
+|---|---|
+| `wd-vit-tagger-v3` | `vit` |
+| `wd-swinv2-tagger-v3` | `swinv2` |
+| `wd-convnext-tagger-v3` | `convnext` |
+| `wd-eva02-large-tagger-v3` | `eva02` |
+| `wd-vit-large-tagger-v3` | `vit-large` |
 
 ### Validation Rules
 
@@ -130,9 +135,9 @@ The configuration file referenced by `WorkflowRunner` and `Wd14TaggerRunner`.
 | `loras[*].file` | Non-empty string |
 | `loras[*].strength` | Numeric value required (missing key is rejected) |
 | `wd14_tagger.general_threshold` / `character_threshold` | 0.0–1.0 |
-| `wdv3_timm.exe_path` | Required, non-empty |
-| `wdv3_timm.model` | One of `vit` / `swinv2` / `convnext` / `eva02` / `vit-large` |
-| `wdv3_timm.general_threshold` / `character_threshold` | 0.0–1.0 |
+| `wd14_tagger` section (when using `WdV3TimmTaggerRunner`) | Same `wd14_tagger.*` rules above, plus `model_name` must appear in the mapping table above |
+
+`wdv3_timm.exe`'s executable path is not configured in the config file — it always resolves to `WdV3TimmPaths.ExeFilePath` (the fixed path `wdv3-timm\wdv3_timm.exe` next to the consuming app's own executable).
 
 ---
 
@@ -193,6 +198,12 @@ var tags = await tagger.TagAsync(imageData);
 ```
 
 ### wdv3-timm (via a local process, no ComfyUI required)
+
+`WdV3TimmTaggerRunner` shares model name and thresholds with the `wd14_tagger` section instead of
+carrying its own, so `workflow_config.json` needs a valid `wd14_tagger` section (`model_name` must
+be one the `WdV3TimmModelMap` mapping table above can translate). The executable itself
+(`wdv3_timm.exe`) is launched from `WdV3TimmPaths.ExeFilePath` — a fixed path next to the consuming
+app's own executable — so it is not configured here.
 
 ```csharp
 // WdV3TimmTaggerRunner — launches the local wdv3_timm.exe in a persistent server mode and tags
@@ -326,21 +337,23 @@ dotnet test ComfyUILibs.sln
 |---|---|---|
 | `Base/ObservablePointTests.cs` | 10 | Coordinate conversion and property change notification |
 | `Base/ObservableSizeTests.cs` | 10 | Size conversion and property change notification |
+| `Ui/UIItemBaseModelTests.cs` | 17 | Item list management (Init/Add/Clear) and selection index |
 | `Common/JsonLoaderTests.cs` | 13 | JSON read/write and error handling |
 | `Common/SettingTests.cs` | 9 | Settings persistence and loading |
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException construction and inheritance |
-| `Services/ConfigLoaderTests.cs` | 52 | Validation — happy path and error cases (includes the wdv3_timm section) |
+| `Services/ConfigLoaderTests.cs` | 48 | Validation — happy path and error cases (WdV3TimmTaggerRunner validation now only checks model-name mapping; the wdv3_timm section itself was removed) |
 | `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
-| `Services/WorkflowBuilderTests.cs` | 18 | Template selection and patching (includes filename_prefix override) |
+| `Services/WorkflowBuilderTests.cs` | 20 | Template selection and patching (includes filename_prefix override) |
 | `Services/WorkflowRunnerTests.cs` | 13 | Mocked with FakeComfyUIClient (includes empty-outputs retry and filenamePrefix propagation) |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
-| `Services/WdV3TimmTaggerRunnerTests.cs` | 16 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, temp files, response handling, DisposeAsync) |
+| `Services/WdV3TimmTaggerRunnerTests.cs` | 17 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, launch arguments using the fixed WdV3TimmPaths.ExeFilePath, temp files, response handling, DisposeAsync) |
+| `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model mapping, listing supported names, case-insensitivity, unknown model names |
 | `Services/CaptioningServiceTests.cs` | 14 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports, combined with a direct `ITaggerRunner` implementation |
-| `Services/PreviewImageCacheServiceTests.cs` | 12 | Image detection, cache hit/miss, failure handling |
+| `Services/PreviewImageCacheServiceTests.cs` | 11 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **218 tests**
+Total: **227 tests**
 
 ---
 

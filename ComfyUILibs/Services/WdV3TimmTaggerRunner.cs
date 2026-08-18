@@ -46,7 +46,8 @@ namespace ComfyUILibs.Services
         /// テスト用コンストラクター。設定オブジェクトと依存を直接注入する。
         /// <c>[assembly: InternalsVisibleTo("ComfyUILibsTests")]</c> でテストプロジェクトからアクセス可能。
         /// </summary>
-        /// <param name="config">読み込み済みの設定オブジェクト（wdv3_timm セクションが設定されていること）。</param>
+        /// <param name="config">読み込み済みの設定オブジェクト（wd14_tagger セクションが設定されていること。
+        /// モデル名・しきい値はこのセクションを共用する）。</param>
         /// <param name="processClientOverride">テスト用プロセスクライアント。null の場合は本番実装を使用する。</param>
         internal WdV3TimmTaggerRunner(Models.WorkflowConfig config, IWdV3TimmProcessClient? processClientOverride)
         {
@@ -97,15 +98,21 @@ namespace ComfyUILibs.Services
                 if (_started)
                     return;
 
-                var wdv3 = _config.WdV3Timm!;
+                // モデル名・しきい値は wd14_tagger セクションを共用する（ConfigLoader.ValidateWdV3TimmConfig で
+                // Wd14Tagger の存在・model_name が WdV3TimmModelMap で変換可能であることを検証済み）。
+                // 実行ファイルは captioning_config.json では指定せず、アプリ実行ファイルと同じ階層の
+                // wdv3-timm フォルダに固定する（WdV3TimmPaths 参照）。存在しない場合は
+                // IWdV3TimmProcessClient.StartAsync がプロセス起動失敗として ComfyUIException を送出する。
+                var wd14 = _config.Wd14Tagger!;
+                WdV3TimmModelMap.TryGetWdV3TimmModel(wd14.ModelName!, out var model);
                 var arguments = new List<string>
                 {
                     "--serve",
-                    "--model", wdv3.Model!,
-                    "-g", wdv3.GeneralThreshold!.Value.ToString(CultureInfo.InvariantCulture),
-                    "-c", wdv3.CharacterThreshold!.Value.ToString(CultureInfo.InvariantCulture),
+                    "--model", model!,
+                    "-g", wd14.GeneralThreshold!.Value.ToString(CultureInfo.InvariantCulture),
+                    "-c", wd14.CharacterThreshold!.Value.ToString(CultureInfo.InvariantCulture),
                 };
-                await _processClient.StartAsync(wdv3.ExePath!, arguments);
+                await _processClient.StartAsync(WdV3TimmPaths.ExeFilePath, arguments);
                 _started = true;
             }
             finally

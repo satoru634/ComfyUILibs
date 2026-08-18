@@ -164,41 +164,30 @@ namespace ComfyUILibs.Services
 
         // ── wdv3-timm 設定バリデーション ──────────────────────────────────────
 
-        /// <summary>wdv3_timm.model に指定できるモデル名（wdv3_timm.py の MODEL_REPO_MAP のキーと一致）。</summary>
-        private static readonly string[] WdV3TimmModelChoices =
-            { "vit", "swinv2", "convnext", "eva02", "vit-large" };
-
         /// <summary>
-        /// config の wdv3_timm セクションを検証する。
-        /// <see cref="WdV3TimmTaggerRunner"/> のコンストラクターから呼ばれる。
+        /// wdv3-timm バックエンド（<see cref="WdV3TimmTaggerRunner"/>）向けの設定を検証する。
+        /// wdv3-timm はモデル名・しきい値を独自に持たず wd14_tagger セクションを共用するため、
+        /// 本メソッドの実体は <see cref="ValidateWd14TaggerConfig"/> の検証に加え、
+        /// wd14_tagger.model_name が <see cref="WdV3TimmModelMap"/> で変換できる値であることの検証のみ。
+        /// 実行ファイルパスは captioning_config.json では指定せず <see cref="WdV3TimmPaths"/> の
+        /// 固定パスを使うため、本メソッドの検証対象ではない（存在しない場合はプロセス起動時に失敗する）。
         /// </summary>
         /// <param name="config">検証対象の設定オブジェクト。</param>
-        /// <exception cref="ComfyUIException">セクション欠落・exe_path 空・model 不正・しきい値が範囲外の場合。</exception>
+        /// <exception cref="ComfyUIException">
+        /// wd14_tagger セクションが欠落・不正（model_name 空・しきい値範囲外）、
+        /// もしくは model_name が wdv3-timm のモデルに変換できない場合。
+        /// </exception>
         public static void ValidateWdV3TimmConfig(WorkflowConfig config)
         {
-            if (config.WdV3Timm == null)
-                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmSectionMissing"));
+            // モデル名・しきい値は wd14_tagger セクションを共用する
+            ValidateWd14TaggerConfig(config);
 
-            var wdv3 = config.WdV3Timm;
-            if (string.IsNullOrWhiteSpace(wdv3.ExePath))
-                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmExePathEmpty"));
-
-            if (string.IsNullOrWhiteSpace(wdv3.Model) || !WdV3TimmModelChoices.Contains(wdv3.Model))
+            if (!WdV3TimmModelMap.TryGetWdV3TimmModel(config.Wd14Tagger!.ModelName!, out _))
                 throw new ComfyUIException(
-                    Messages.Get("ConfigLoader_WdV3TimmModelInvalid_Format", string.Join(", ", WdV3TimmModelChoices)));
-
-            ValidateWdV3TimmThreshold("general_threshold", wdv3.GeneralThreshold);
-            ValidateWdV3TimmThreshold("character_threshold", wdv3.CharacterThreshold);
-        }
-
-        /// <summary>wdv3-timm のしきい値（0.0〜1.0）を検証する。</summary>
-        private static void ValidateWdV3TimmThreshold(string key, double? val)
-        {
-            if (val == null)
-                throw new ComfyUIException(Messages.Get("ConfigLoader_WdV3TimmThresholdKeyMissing_Format", key));
-            if (val < 0.0 || val > 1.0)
-                throw new ComfyUIException(
-                    Messages.Get("ConfigLoader_WdV3TimmThresholdOutOfRange_Format", key, val));
+                    Messages.Get(
+                        "ConfigLoader_WdV3TimmModelNameNotMapped_Format",
+                        config.Wd14Tagger!.ModelName!,
+                        string.Join(", ", WdV3TimmModelMap.SupportedWdV3TimmModels)));
         }
 
         // ── workflow_config.json ロード ────────────────────────────────────────────────

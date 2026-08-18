@@ -47,12 +47,13 @@ namespace ComfyUILibsTests.Services
 
     public class WdV3TimmTaggerRunnerTests
     {
+        // モデル名・しきい値は wd14_tagger セクションを共用する（ConfigLoader.ValidateWdV3TimmConfig 参照）。
+        // 実行ファイルパスは captioning_config.json では扱わず WdV3TimmPaths の固定パスを使う。
         private static WorkflowConfig CreateConfig() => new()
         {
-            WdV3Timm = new WdV3TimmConfig
+            Wd14Tagger = new Wd14TaggerConfig
             {
-                ExePath = @"E:\Python_project\wdv3-timm\wdv3_timm.exe",
-                Model = "vit",
+                ModelName = "wd-vit-tagger-v3",
                 GeneralThreshold = 0.35,
                 CharacterThreshold = 0.75,
             }
@@ -64,9 +65,20 @@ namespace ComfyUILibsTests.Services
         // ── コンストラクター・設定バリデーション ────────────────────────────
 
         [Fact]
-        public void Constructor_MissingWdV3TimmSection_ThrowsComfyUIException()
+        public void Constructor_MissingWd14TaggerSection_ThrowsComfyUIException()
         {
+            // モデル名・しきい値は wd14_tagger セクションを共用するため、それが無いと構築できない
             var config = new WorkflowConfig();
+
+            Assert.Throws<ComfyUIException>(() =>
+                new WdV3TimmTaggerRunner(config, new FakeWdV3TimmProcessClient()));
+        }
+
+        [Fact]
+        public void Constructor_UnmappedWd14ModelName_ThrowsComfyUIException()
+        {
+            var config = CreateConfig();
+            config.Wd14Tagger!.ModelName = "wd-v1-4-moat-tagger-v2";
 
             Assert.Throws<ComfyUIException>(() =>
                 new WdV3TimmTaggerRunner(config, new FakeWdV3TimmProcessClient()));
@@ -135,7 +147,7 @@ namespace ComfyUILibsTests.Services
             await runner.TagAsync(new byte[] { 1, 2, 3 }, "photo.jpg");
 
             Assert.Equal(1, fakeClient.StartCallCount);
-            Assert.Equal(@"E:\Python_project\wdv3-timm\wdv3_timm.exe", fakeClient.StartedExePath);
+            Assert.Equal(WdV3TimmPaths.ExeFilePath, fakeClient.StartedExePath);
             Assert.Equal(
                 new[] { "--serve", "--model", "vit", "-g", "0.35", "-c", "0.75" },
                 fakeClient.StartedArguments);

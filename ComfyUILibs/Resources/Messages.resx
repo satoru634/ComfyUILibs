@@ -103,11 +103,7 @@
   <data name="ConfigLoader_LoraEntryEmpty_Format" xml:space="preserve"><value>'loras[{0}]' は空でない文字列である必要があります</value></data>
   <data name="ConfigLoader_PositivePromptTooLong_Format" xml:space="preserve"><value>'prompts.positive' が長すぎます（最大 {0} 文字）</value></data>
   <data name="ConfigLoader_NegativePromptTooLong_Format" xml:space="preserve"><value>'prompts.negative' が長すぎます（最大 {0} 文字）</value></data>
-  <data name="ConfigLoader_WdV3TimmSectionMissing" xml:space="preserve"><value>workflow_config.json に 'wdv3_timm' キーがありません</value></data>
-  <data name="ConfigLoader_WdV3TimmExePathEmpty" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.exe_path' は空でない文字列である必要があります</value></data>
-  <data name="ConfigLoader_WdV3TimmModelInvalid_Format" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.model' は次のいずれかである必要があります: {0}</value></data>
-  <data name="ConfigLoader_WdV3TimmThresholdKeyMissing_Format" xml:space="preserve"><value>workflow_config.json に 'wdv3_timm.{0}' キーがありません</value></data>
-  <data name="ConfigLoader_WdV3TimmThresholdOutOfRange_Format" xml:space="preserve"><value>workflow_config.json の 'wdv3_timm.{0}' は 0.0〜1.0 の範囲で指定してください（指定値: {1}）</value></data>
+  <data name="ConfigLoader_WdV3TimmModelNameNotMapped_Format" xml:space="preserve"><value>workflow_config.json の 'wd14_tagger.model_name' の値 '{0}' に対応する wdv3-timm モデルが見つかりません（対応モデル: {1}）</value></data>
 
   <!-- Wd14TaggerRunner -->
   <data name="Wd14TaggerRunner_TemplateFileNotFound" xml:space="preserve"><value>WD14 Tagger テンプレートファイルが見つかりません</value></data>
