@@ -162,6 +162,19 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/本ファイル/`.claude/directory_structure.md` を更新
 - 本フェーズ・追加修正とも実装完了時点でコミットしていない（利用側 ComfyUICaptioningTool の指示「実装完了後はコミットしないでください」に合わせ、対となる本リポジトリ側の変更も未コミットのまま揃えている）
 
+## フェーズ9: WdV3TimmTaggerRunner のタグ正規化（アンダースコア→半角スペース）（`fix/wdv3-timm-tag-underscore-to-space` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUICaptioningTool](https://github.com/satoru634/ComfyUICaptioningTool) から「wdv3-timm を使用してキャプショニングすると `short_hair`/`blue_eyes` のように単語間がアンダースコアになってしまう」という報告を受けて修正した。
+
+- **原因**: `wdv3_timm.py` の `--serve` モード（`run_serve_mode`）は、タグ名のアンダースコアを保持したまま `caption` を返す仕様（プロトコル契約として XML ドキュメントコメント・同スクリプトのコメントに明記済み）。一方、ComfyUI 経由の `Wd14TaggerRunner` は ComfyUI 側の WD Timm Tagger カスタムノードが既にアンダースコアを半角スペースへ変換した状態で結果を返しているため、両バックエンドでタグの見た目が揃っていなかった
+- **対応方針**: wdv3-timm 側（Python スクリプト、別リポジトリで実行ファイルの再ビルドが必要）ではなく、C# 側（`WdV3TimmTaggerRunner`）でタグ文字列を後処理する方式を採用した。理由は (1) 既にビルド済みの `wdv3_timm.exe` を再ビルドせずに反映できる、(2) `wdv3_timm.py` 側のプロトコル契約（`caption` はアンダースコア保持のまま）を変更せずに済む、(3) `ITaggerRunner` 実装の中で完結しテストも書きやすい、の3点
+- [x] `Services/WdV3TimmTaggerRunner.cs` — `RequestTagsAsync` が応答から取得したタグ文字列を、新設 `private static string NormalizeTags(string tags)` で正規化してから返すよう変更した。カンマ区切りで分割し、各タグ名の長さが3文字を超える場合のみアンダースコアを半角スペースへ置換する。`^_^`/`;_;`/`>_<` のような顔文字系タグ（3文字以下）は変換すると意味が壊れるため対象外とした（WD14 Tagger 系ツール、例えば A1111 拡張版 WD14 Tagger で一般的に採用されている慣習に合わせたもの）
+- `Wd14TaggerRunner`（ComfyUI 経由）は変更していない（既に ComfyUI 側のノードでスペース変換済みのため）
+- [x] `ComfyUILibsTests/Services/WdV3TimmTaggerRunnerTests.cs` に2件追加（`blue_eyes`/`short_hair` のようなタグがスペース変換されること、`^_^`/`;_;` のような短い顔文字系タグはアンダースコアのまま保持されること）。全229件、全件パス確認済み（`ComfyUILibsTests.exe` 直接実行で確認。227件 → 229件）
+- `README.md`/`doc/README_english.md`/`doc/class_diagram.md`/`.claude/directory_structure.md`/本ファイルを更新
+- `dotnet build ComfyUICaptioningTool.sln`（利用側）成功を確認済み
+- 本フェーズは実装完了時点でコミットしていない（フェーズ8以降ユーザー指示「実装完了後はコミットしないでください」が継続適用されているため、それに合わせた）
+
 ## テスト（ComfyUILibsTests）
 
 各クラスに対応するテストを `ComfyUILibsTests/<同じ名前空間>/` に配置済み。件数の内訳は `README.md` の「テスト」セクション参照（全パス）。

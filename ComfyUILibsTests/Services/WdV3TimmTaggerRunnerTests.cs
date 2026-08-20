@@ -212,6 +212,30 @@ namespace ComfyUILibsTests.Services
         }
 
         [Fact]
+        public async Task TagAsync_OkResponse_UnderscoreInTags_ConvertedToSpace()
+        {
+            var fakeClient = new FakeWdV3TimmProcessClient();
+            fakeClient.Responses.Enqueue(OkResponse("1girl, blue_eyes, short_hair"));
+            var runner = new WdV3TimmTaggerRunner(CreateConfig(), fakeClient);
+
+            var tags = await runner.TagAsync(new byte[] { 1 });
+
+            Assert.Equal("1girl, blue eyes, short hair", tags);
+        }
+
+        [Fact]
+        public async Task TagAsync_OkResponse_ShortEmoticonTag_KeepsUnderscore()
+        {
+            var fakeClient = new FakeWdV3TimmProcessClient();
+            fakeClient.Responses.Enqueue(OkResponse("1girl, ^_^, ;_;"));
+            var runner = new WdV3TimmTaggerRunner(CreateConfig(), fakeClient);
+
+            var tags = await runner.TagAsync(new byte[] { 1 });
+
+            Assert.Equal("1girl, ^_^, ;_;", tags);
+        }
+
+        [Fact]
         public async Task TagAsync_ErrorResponse_ThrowsComfyUIExceptionWithMessage()
         {
             var fakeClient = new FakeWdV3TimmProcessClient();

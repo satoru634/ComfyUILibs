@@ -121,7 +121,7 @@ namespace ComfyUILibs.Services
             }
         }
 
-        /// <summary>1 件のタグ付けリクエストを送信し、応答 JSON からタグ文字列を取り出す。</summary>
+        /// <summary>1 件のタグ付けリクエストを送信し、応答 JSON からタグ文字列を取り出す（アンダースコアは半角スペースへ正規化される）。</summary>
         private async Task<string> RequestTagsAsync(string imagePath)
         {
             var request = JsonSerializer.Serialize(new { image_path = imagePath });
@@ -147,12 +147,35 @@ namespace ComfyUILibs.Services
                 var status = root.TryGetProperty("status", out var statusProp) ? statusProp.GetString() : null;
 
                 if (status == "ok" && root.TryGetProperty("tags", out var tagsProp))
-                    return tagsProp.GetString() ?? string.Empty;
+                    return NormalizeTags(tagsProp.GetString() ?? string.Empty);
 
                 var message = root.TryGetProperty("message", out var messageProp) ? messageProp.GetString() : null;
                 throw new ComfyUIException(
                     Messages.Get("WdV3TimmTaggerRunner_ServerError_Format", message ?? responseLine));
             }
+        }
+
+        /// <summary>
+        /// wdv3-timm（<c>wdv3_timm.py</c> の <c>--serve</c> モード）が返すタグ文字列は、
+        /// タグ名のアンダースコアを保持したまま返す仕様（プロトコル契約、<c>run_serve_mode</c> 参照）のため、
+        /// ComfyUI の WD Timm Tagger カスタムノード（<see cref="Wd14TaggerRunner"/> 経由、既にアンダースコアを
+        /// 半角スペースへ変換した状態で返す）とタグの見た目が揃わない。そのため本メソッドで各タグ名の
+        /// アンダースコアを半角スペースへ変換する。ただし <c>^_^</c>/<c>;_;</c>/<c>&gt;_&lt;</c> のような
+        /// 顔文字系タグ（4文字未満）は変換すると意味が壊れるため、WD14 Tagger 系ツールで一般的な慣習
+        /// （タグ名の長さが3文字を超える場合のみ変換する）に合わせて対象外とする。
+        /// </summary>
+        private static string NormalizeTags(string tags)
+        {
+            var parts = tags.Split(',');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var tag = parts[i].Trim();
+                if (tag.Length > 3)
+                    tag = tag.Replace('_', ' ');
+                parts[i] = tag;
+            }
+
+            return string.Join(", ", parts);
         }
 
         /// <summary>常駐サーバープロセスを終了する（起動していない場合は何もしない）。</summary>
