@@ -222,6 +222,14 @@ foreach (var path in Directory.EnumerateFiles("./images", "*.png"))
 // Leaving the `await using` scope calls DisposeAsync, which terminates the persistent process
 ```
 
+wdv3_timm.py keeps underscores in tag names as part of its protocol contract, so passing its
+response straight through would produce underscore-separated tags like `blue_eyes`. To match the
+look of tags returned by `Wd14TaggerRunner` (via ComfyUI, whose WD Timm Tagger custom node already
+converts underscores to spaces), `WdV3TimmTaggerRunner` normalizes each tag's underscores to spaces
+when it receives the response (e.g. `blue_eyes` -> `blue eyes`). Emoticon-style tags such as
+`^_^`/`;_;`/`>_<` (3 characters or fewer) are left untouched, following the common convention among
+WD14 Tagger tooling, since converting them would break their meaning.
+
 > **Note**: Implementing the `--serve` persistent server mode on the wdv3-timm side
 > (`wdv3_timm.exe` / `wdv3_timm.py`) is out of scope for this library (a separate task in the
 > wdv3-timm repository). It must follow the protocol contract documented in
@@ -346,14 +354,14 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowBuilderTests.cs` | 20 | Template selection and patching (includes filename_prefix override) |
 | `Services/WorkflowRunnerTests.cs` | 13 | Mocked with FakeComfyUIClient (includes empty-outputs retry and filenamePrefix propagation) |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
-| `Services/WdV3TimmTaggerRunnerTests.cs` | 17 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, launch arguments using the fixed WdV3TimmPaths.ExeFilePath, temp files, response handling, DisposeAsync) |
+| `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, launch arguments using the fixed WdV3TimmPaths.ExeFilePath, temp files, response handling, underscore-to-space tag normalization preserving emoticon tags, DisposeAsync) |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model mapping, listing supported names, case-insensitivity, unknown model names |
 | `Services/CaptioningServiceTests.cs` | 14 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports, combined with a direct `ITaggerRunner` implementation |
 | `Services/PreviewImageCacheServiceTests.cs` | 11 | Image detection, cache hit/miss, failure handling |
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **227 tests**
+Total: **229 tests**
 
 ---
 

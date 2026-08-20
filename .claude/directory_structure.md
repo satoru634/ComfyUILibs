@@ -70,7 +70,16 @@ ComfyUILibs/                            <- リポジトリルート
                                              起動する実行ファイルパスは WdV3TimmPaths.ExeFilePath（固定、
                                              フェーズ8の追加修正で config 由来の値から変更）。実行ファイル
                                              未配置時の専用チェックは持たず、WdV3TimmProcessClient.StartAsync
-                                             内の Win32Exception → ComfyUIException ラップに委ねる
+                                             内の Win32Exception → ComfyUIException ラップに委ねる。
+                                             フェーズ9で、応答に含まれるタグ文字列を NormalizeTags
+                                             （private static）で正規化するようにした。wdv3_timm.py の
+                                             --serve モードはタグ名のアンダースコアを保持したまま返す
+                                             プロトコル契約のため、そのまま返すと Wd14TaggerRunner
+                                             （ComfyUI 経由、WD Timm Tagger カスタムノードが既にアンダー
+                                             スコアを半角スペースへ変換済み）とタグの見た目が揃わない問題が
+                                             あった。各タグ名の長さが3文字を超える場合のみアンダースコアを
+                                             半角スペースへ置換する（^_^/;_; のような顔文字系タグは
+                                             WD14 Tagger 系ツールの慣習に合わせて対象外とし保持する）
       CaptioningService.cs               <- captioning_tool.py の CaptioningTool クラスの移植
                                              （ディレクトリ走査・タグフィルタ・タグ集計レポート）。
                                              コンストラクター引数は ITaggerRunner（Wd14TaggerRunner の

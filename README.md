@@ -223,6 +223,14 @@ foreach (var path in Directory.EnumerateFiles("./images", "*.png"))
 // await using のスコープを抜けると DisposeAsync が常駐プロセスを終了する
 ```
 
+wdv3_timm.py 側はタグ名のアンダースコアを保持したまま返す仕様（プロトコル契約）のため、
+`WdV3TimmTaggerRunner.TagAsync` が受け取った応答をそのまま返すと `blue_eyes` のように
+アンダースコア区切りのタグになってしまう。`Wd14TaggerRunner`（ComfyUI 経由、WD Timm Tagger
+カスタムノードが既にアンダースコアを半角スペースへ変換した状態で返す）とタグの見た目を揃えるため、
+`WdV3TimmTaggerRunner` は応答受信時に各タグ名のアンダースコアを半角スペースへ変換してから返す
+（例: `blue_eyes` → `blue eyes`）。ただし `^_^`/`;_;`/`>_<` のような顔文字系タグ（長さ3文字以下）は
+変換すると意味が壊れるため、WD14 Tagger 系ツールで一般的な慣習に合わせて対象外とする（保持される）。
+
 > **注意**: wdv3-timm 側（`wdv3_timm.exe` / `wdv3_timm.py`）の `--serve` 常駐サーバーモードの実装は
 > 本ライブラリの対象外（wdv3-timm リポジトリ側の別タスク）。
 > `IWdV3TimmProcessClient` の XML ドキュメントコメントに記載のプロトコル契約（起動引数・
@@ -347,14 +355,14 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowBuilderTests.cs` | 20 | テンプレート選択・適用（filename_prefix 上書きを含む） |
 | `Services/WorkflowRunnerTests.cs` | 13 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播を含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
-| `Services/WdV3TimmTaggerRunnerTests.cs` | 17 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・起動引数（WdV3TimmPaths.ExeFilePath 固定）・一時ファイル・応答解釈・DisposeAsync） |
+| `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・起動引数（WdV3TimmPaths.ExeFilePath 固定）・一時ファイル・応答解釈・タグのアンダースコア→半角スペース正規化（顔文字系タグは保持）・DisposeAsync） |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model の対応表の変換・一覧取得・大文字小文字無視・未知モデル名の挙動 |
 | `Services/CaptioningServiceTests.cs` | 14 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート・ITaggerRunner 抽象の直接実装との組み合わせ |
 | `Services/PreviewImageCacheServiceTests.cs` | 11 | 画像判定・キャッシュヒット/新規取得/失敗時の挙動 |
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **227 件**
+合計: **229 件**
 
 ---
 
