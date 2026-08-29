@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Models;
 
 namespace ComfyUILibs.Services
@@ -15,9 +16,11 @@ namespace ComfyUILibs.Services
         /// </summary>
         /// <param name="workflow">送信するワークフロー JSON（<see cref="WorkflowBuilder.Apply"/> の戻り値）。</param>
         /// <param name="clientId">WebSocket 監視と紐付けるクライアント識別子（UUID 文字列）。</param>
+        /// <param name="cancellationToken">キャンセル要求を伝えるトークン。</param>
         /// <returns>ComfyUI が割り当てた prompt_id。</returns>
         /// <exception cref="Exceptions.ComfyUIException">接続失敗・HTTP エラー時に送出。</exception>
-        Task<string> SubmitAsync(JsonObject workflow, string clientId);
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> がキャンセルされた場合。</exception>
+        Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// WebSocket で実行完了またはエラーを監視し、完了まで待機する。
@@ -25,8 +28,13 @@ namespace ComfyUILibs.Services
         /// </summary>
         /// <param name="promptId">監視対象の prompt_id。</param>
         /// <param name="clientId"><see cref="SubmitAsync"/> に渡したクライアント識別子。</param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を伝えるトークン。ComfyUI サーバーがダウンして完了イベントも切断も
+        /// 検出できないまま待ち続ける状況でも、このトークンをキャンセルすれば即座に監視を打ち切れる。
+        /// </param>
         /// <exception cref="Exceptions.ComfyUIException">実行エラー・接続失敗・タイムアウト時に送出。</exception>
-        Task MonitorAsync(string promptId, string clientId);
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> がキャンセルされた場合。</exception>
+        Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 画像バイト列を ComfyUI にアップロードし、サーバー側で割り当てられたファイル名を返す。
@@ -52,9 +60,11 @@ namespace ComfyUILibs.Services
         /// history API の outputs フィールドを走査して images を収集する。
         /// </summary>
         /// <param name="promptId">対象の prompt_id。</param>
+        /// <param name="cancellationToken">キャンセル要求を伝えるトークン。</param>
         /// <returns>出力ファイルのリスト。生成物がない場合は空リスト。</returns>
         /// <exception cref="Exceptions.ComfyUIException">接続失敗・HTTP エラー時に送出。</exception>
-        Task<List<OutputFile>> GetOutputsAsync(string promptId);
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> がキャンセルされた場合。</exception>
+        Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// GET /view で出力ファイルの実体（画像バイト列）を取得する。

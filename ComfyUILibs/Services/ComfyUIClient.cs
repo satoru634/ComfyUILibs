@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
 using ComfyUILibs.Resources;
@@ -38,7 +39,7 @@ namespace ComfyUILibs.Services
         // ── ワークフロー送信 ───────────────────────────────────────────────
 
         /// <inheritdoc/>
-        public async Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public async Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
         {
             // ComfyUI は {"prompt": {...}, "client_id": "..."} の形式を要求する
             var payload = new JsonObject
@@ -48,8 +49,8 @@ namespace ComfyUILibs.Services
             };
             var content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
 
-            var response = await SendAsync(() => _httpClient.PostAsync($"{_url}/prompt", content));
-            var responseJson = await response.Content.ReadAsStringAsync();
+            var response = await SendAsync(ct => _httpClient.PostAsync($"{_url}/prompt", content, ct), cancellationToken);
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             var result = JsonNode.Parse(responseJson);
             return result?["prompt_id"]?.GetValue<string>()
                 ?? throw new ComfyUIException(Messages.Get("ComfyUIClient_PromptIdMissing"));
@@ -58,7 +59,7 @@ namespace ComfyUILibs.Services
         // ── WebSocket 監視 ─────────────────────────────────────────────────
 
         /// <inheritdoc/>
-        public async Task MonitorAsync(string promptId, string clientId)
+        public async Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default)
         {
             // http/https を ws/wss に変換して WebSocket URL を構築する
             var wsUrl = _url.Replace("http://", "ws://").Replace("https://", "wss://");
@@ -67,7 +68,13 @@ namespace ComfyUILibs.Services
             var ws = new ClientWebSocket();
             try
             {
-                await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
+                await ws.ConnectAsync(new Uri(wsUrl), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 呼び出し側からのキャンセルはそのまま伝播させる
+                ws.Dispose();
+                throw;
             }
             catch (WebSocketException ex)
             {
@@ -77,7 +84,7 @@ namespace ComfyUILibs.Services
 
             using (ws)
             {
-                await MonitorWebSocketAsync(ws, promptId);
+                await MonitorWebSocketAsync(ws, promptId, cancellationToken);
             }
         }
 
@@ -85,24 +92,36 @@ namespace ComfyUILibs.Services
         /// WebSocket メッセージを受信ループで処理し、実行完了またはエラーを検出する。
         /// 古い ComfyUI が送信する <c>executing{node:null}</c> を受信した場合はポーリングにフォールバックする。
         /// </summary>
-        private async Task MonitorWebSocketAsync(ClientWebSocket ws, string promptId)
+        private async Task MonitorWebSocketAsync(ClientWebSocket ws, string promptId, CancellationToken cancellationToken = default)
         {
             // 高速実行で WebSocket より先に処理が完了している場合のタイムアウト値
             var wsTimeout = TimeSpan.FromSeconds(2);
 
             while (true)
             {
+                // 呼び出し側からキャンセルされた場合は即座に中断する
+                cancellationToken.ThrowIfCancellationRequested();
+
                 string messageText;
                 WebSocketMessageType messageType;
                 try
                 {
-                    using var cts = new CancellationTokenSource(wsTimeout);
+                    // 2 秒のローカルタイムアウトと外部キャンセルトークンを連結する。
+                    // サーバーダウン時はメッセージも Close フレームも来ないため、
+                    // 外部トークンがなければこのループを永久に回し続けてしまう。
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(wsTimeout);
                     (messageType, messageText) = await ReceiveMessageAsync(ws, cts.Token);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // 外部キャンセル: 呼び出し側へそのまま伝播させる
+                    throw;
                 }
                 catch (OperationCanceledException)
                 {
-                    // タイムアウト: history で完了済みか確認（高速実行時の競合状態対策）
-                    if (await IsCompletedAsync(promptId))
+                    // ローカルタイムアウト: history で完了済みか確認（高速実行時の競合状態対策）
+                    if (await IsCompletedAsync(promptId, cancellationToken))
                         return;
                     continue;
                 }
@@ -110,7 +129,7 @@ namespace ComfyUILibs.Services
                 {
                     // サーバー側が接続を突然切断した場合（Close フレームなし）は
                     // Python 版の StopAsyncIteration 相当として扱い、完了済みならエラーにしない
-                    if (await IsCompletedAsync(promptId))
+                    if (await IsCompletedAsync(promptId, cancellationToken))
                         return;
                     break;
                 }
@@ -147,7 +166,7 @@ namespace ComfyUILibs.Services
             }
 
             // 古い ComfyUI はポーリングで完了を確認する
-            await PollUntilCompletedAsync(promptId);
+            await PollUntilCompletedAsync(promptId, cancellationToken);
         }
 
         /// <summary>
@@ -173,16 +192,21 @@ namespace ComfyUILibs.Services
         /// GET /history/{promptId} で完了済みか確認する。
         /// レスポンスに promptId キーが存在すれば完了とみなす。
         /// </summary>
-        private async Task<bool> IsCompletedAsync(string promptId)
+        private async Task<bool> IsCompletedAsync(string promptId, CancellationToken cancellationToken = default)
         {
             try
             {
-                var response = await _httpClient.GetAsync($"{_url}/history/{promptId}");
+                var response = await _httpClient.GetAsync($"{_url}/history/{promptId}", cancellationToken);
                 if (!response.IsSuccessStatusCode)
                     return false;
-                var json = await response.Content.ReadAsStringAsync();
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
                 using var doc = JsonDocument.Parse(json);
                 return doc.RootElement.TryGetProperty(promptId, out _);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 呼び出し側からのキャンセルは握りつぶさず伝播させる
+                throw;
             }
             catch
             {
@@ -195,13 +219,13 @@ namespace ComfyUILibs.Services
         /// 1 秒間隔でポーリングし、完了するまで待機する。
         /// <paramref name="timeoutSeconds"/> を超えた場合は <see cref="ComfyUIException"/> を送出する。
         /// </summary>
-        private async Task PollUntilCompletedAsync(string promptId, int timeoutSeconds = 600)
+        private async Task PollUntilCompletedAsync(string promptId, CancellationToken cancellationToken = default, int timeoutSeconds = 600)
         {
             for (int i = 0; i < timeoutSeconds; i++)
             {
-                if (await IsCompletedAsync(promptId))
+                if (await IsCompletedAsync(promptId, cancellationToken))
                     return;
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
             throw new ComfyUIException(Messages.Get("ComfyUIClient_CompletionTimeout"));
         }
@@ -215,7 +239,7 @@ namespace ComfyUILibs.Services
             using var form = new MultipartFormDataContent();
             form.Add(new ByteArrayContent(imageData), "image", filename);
 
-            var response = await SendAsync(() => _httpClient.PostAsync($"{_url}/upload/image", form));
+            var response = await SendAsync(ct => _httpClient.PostAsync($"{_url}/upload/image", form, ct));
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonNode.Parse(responseJson);
             return result?["name"]?.GetValue<string>()
@@ -227,7 +251,7 @@ namespace ComfyUILibs.Services
         /// <inheritdoc/>
         public async Task<JsonElement> GetHistoryAsync(string promptId)
         {
-            var response = await SendAsync(() => _httpClient.GetAsync($"{_url}/history/{promptId}"));
+            var response = await SendAsync(ct => _httpClient.GetAsync($"{_url}/history/{promptId}", ct));
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
 
@@ -239,10 +263,10 @@ namespace ComfyUILibs.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public async Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
         {
-            var response = await SendAsync(() => _httpClient.GetAsync($"{_url}/history/{promptId}"));
-            var json = await response.Content.ReadAsStringAsync();
+            var response = await SendAsync(ct => _httpClient.GetAsync($"{_url}/history/{promptId}", ct), cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
             using var doc = JsonDocument.Parse(json);
 
             var outputs = new List<OutputFile>();
@@ -278,7 +302,7 @@ namespace ComfyUILibs.Services
                 $"&subfolder={Uri.EscapeDataString(subfolder)}" +
                 $"&type={Uri.EscapeDataString(type)}";
 
-            var response = await SendAsync(() => _httpClient.GetAsync($"{_url}/view?{query}"));
+            var response = await SendAsync(ct => _httpClient.GetAsync($"{_url}/view?{query}", ct));
             return await response.Content.ReadAsByteArrayAsync();
         }
 
@@ -287,13 +311,22 @@ namespace ComfyUILibs.Services
         /// <summary>
         /// HTTP リクエストを送信し、接続エラーやタイムアウト、非成功ステータスコードを
         /// <see cref="ComfyUIException"/> に変換する共通ラッパー。
+        /// 呼び出し側から <paramref name="cancellationToken"/> でキャンセルされた場合は
+        /// <see cref="OperationCanceledException"/> をそのまま伝播させる（<see cref="ComfyUIException"/> に変換しない）。
         /// </summary>
-        private static async Task<HttpResponseMessage> SendAsync(Func<Task<HttpResponseMessage>> requestFunc)
+        private static async Task<HttpResponseMessage> SendAsync(
+            Func<CancellationToken, Task<HttpResponseMessage>> requestFunc,
+            CancellationToken cancellationToken = default)
         {
             HttpResponseMessage response;
             try
             {
-                response = await requestFunc();
+                response = await requestFunc(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 明示的なキャンセル要求。HttpClient.Timeout による TaskCanceledException とは区別する
+                throw;
             }
             catch (HttpRequestException ex)
             {

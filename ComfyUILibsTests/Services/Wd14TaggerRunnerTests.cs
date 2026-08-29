@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
 using ComfyUILibs.Resources;
@@ -30,10 +31,10 @@ namespace ComfyUILibsTests.Services
             return JsonDocument.Parse(json).RootElement.Clone();
         }
 
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
             => Task.FromResult(PromptId);
 
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => Task.FromResult(UploadedName);
@@ -41,7 +42,7 @@ namespace ComfyUILibsTests.Services
         public Task<JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(BuildHistory());
 
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<OutputFile>());
 
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
@@ -267,12 +268,12 @@ namespace ComfyUILibsTests.Services
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => throw new ComfyUIException(_message);
 
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
             => Task.FromResult("pid");
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(JsonDocument.Parse("{}").RootElement);
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<OutputFile>());
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
             => Task.FromResult(Array.Empty<byte>());
@@ -283,12 +284,12 @@ namespace ComfyUILibsTests.Services
     {
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => Task.FromResult("uploaded.png");
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
             => Task.FromResult("pid");
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(JsonDocument.Parse("""{"outputs":{"3":{}}}""").RootElement.Clone());
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<OutputFile>());
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
             => Task.FromResult(Array.Empty<byte>());
@@ -313,9 +314,9 @@ namespace ComfyUILibsTests.Services
 
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => Task.FromResult("uploaded.png");
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
             => Task.FromResult("pid");
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task<JsonElement> GetHistoryAsync(string promptId)
         {
@@ -326,7 +327,7 @@ namespace ComfyUILibsTests.Services
             return Task.FromResult(JsonDocument.Parse(json).RootElement.Clone());
         }
 
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<OutputFile>());
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
             => Task.FromResult(Array.Empty<byte>());

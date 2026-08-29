@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
 using ComfyUILibs.Services;
@@ -14,10 +15,10 @@ namespace ComfyUILibsTests.Services
         public Exception? ThrowOnGetImage { get; set; }
         public int GetImageCallCount { get; private set; }
 
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
             => Task.FromResult("pid");
 
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => Task.FromResult("uploaded.png");
@@ -25,7 +26,7 @@ namespace ComfyUILibsTests.Services
         public Task<JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(JsonDocument.Parse("{}").RootElement);
 
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
             => Task.FromResult(new List<OutputFile>());
 
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)

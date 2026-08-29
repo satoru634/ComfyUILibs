@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Common;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
@@ -115,13 +116,18 @@ namespace ComfyUILibs.Services
         /// <param name="filenamePrefix">
         /// 出力ファイル名のプレフィックス。null または空白のみの場合はテンプレートに記述された値をそのまま使用する。
         /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を伝えるトークン。ComfyUI への送信・完了監視・結果取得の各待機を中断できる。
+        /// </param>
         /// <returns>生成された出力ファイルのリスト。</returns>
         /// <exception cref="ComfyUIException">バリデーション失敗・LoRA 解決失敗・ComfyUI エラーの場合。</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> がキャンセルされた場合。</exception>
         public async Task<List<OutputFile>> ExecuteAsync(
             List<string> loras,
             PromptPair prompts,
             ImageSize? imageSize = null,
-            string? filenamePrefix = null)
+            string? filenamePrefix = null,
+            CancellationToken cancellationToken = default)
         {
             // 各実行前に前回の状態をクリアする（RunAsync で例外発生時の参照を防ぐ）
             TemplatePath = null;
@@ -150,15 +156,15 @@ namespace ComfyUILibs.Services
 
             var client = _clientOverride ?? new ComfyUIClient(_config.ComfyuiUrl!);
             var clientId = Guid.NewGuid().ToString();
-            var promptId = await client.SubmitAsync(builtWorkflow, clientId);
-            await client.MonitorAsync(promptId, clientId);
-            var outputs = await client.GetOutputsAsync(promptId);
+            var promptId = await client.SubmitAsync(builtWorkflow, clientId, cancellationToken);
+            await client.MonitorAsync(promptId, clientId, cancellationToken);
+            var outputs = await client.GetOutputsAsync(promptId, cancellationToken);
 
             // 完了検知直後は history 反映が間に合わず空リストになることがあるためリトライする
             for (int attempt = 0; outputs.Count == 0 && attempt < MaxOutputsRetryCount; attempt++)
             {
-                await Task.Delay(OutputsRetryDelay);
-                outputs = await client.GetOutputsAsync(promptId);
+                await Task.Delay(OutputsRetryDelay, cancellationToken);
+                outputs = await client.GetOutputsAsync(promptId, cancellationToken);
             }
 
             // 成功時のみ状態を更新する（例外が発生すると到達しないため、失敗時は null のまま）

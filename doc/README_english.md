@@ -162,6 +162,13 @@ var outputs = await runner.ExecuteAsync(loras, prompts, imageSize);
 // If null or whitespace-only, the value already written in the template is kept as-is.
 var outputsWithPrefix = await runner.ExecuteAsync(loras, prompts, imageSize, filenamePrefix: "my_batch");
 
+// Passing a CancellationToken lets you abort the submit / monitor / fetch waits.
+// Even when the ComfyUI server goes down and neither a completion event nor a disconnect
+// can be detected, cancelling the token exits immediately with OperationCanceledException
+// (it is NOT converted into a connection-failure/timeout ComfyUIException).
+using var cts = new CancellationTokenSource();
+var outputsCancelable = await runner.ExecuteAsync(loras, prompts, imageSize, cancellationToken: cts.Token);
+
 // Metadata available after execution
 Console.WriteLine(runner.PromptId);     // prompt_id assigned by ComfyUI
 Console.WriteLine(runner.TemplatePath); // path to the template that was used
@@ -350,9 +357,9 @@ dotnet test ComfyUILibs.sln
 | `Common/SettingTests.cs` | 9 | Settings persistence and loading |
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException construction and inheritance |
 | `Services/ConfigLoaderTests.cs` | 48 | Validation — happy path and error cases (WdV3TimmTaggerRunner validation now only checks model-name mapping; the wdv3_timm section itself was removed) |
-| `Services/ComfyUIClientTests.cs` | 13 | Mocked with FakeHttpMessageHandler (includes GetImageAsync) |
+| `Services/ComfyUIClientTests.cs` | 15 | Mocked with FakeHttpMessageHandler (includes GetImageAsync and cancellation propagation) |
 | `Services/WorkflowBuilderTests.cs` | 20 | Template selection and patching (includes filename_prefix override) |
-| `Services/WorkflowRunnerTests.cs` | 13 | Mocked with FakeComfyUIClient (includes empty-outputs retry and filenamePrefix propagation) |
+| `Services/WorkflowRunnerTests.cs` | 15 | Mocked with FakeComfyUIClient (includes empty-outputs retry, filenamePrefix propagation, and cancellation) |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
 | `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, launch arguments using the fixed WdV3TimmPaths.ExeFilePath, temp files, response handling, underscore-to-space tag normalization preserving emoticon tags, DisposeAsync) |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model mapping, listing supported names, case-insensitivity, unknown model names |
@@ -361,7 +368,7 @@ dotnet test ComfyUILibs.sln
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **229 tests**
+Total: **233 tests**
 
 ---
 
