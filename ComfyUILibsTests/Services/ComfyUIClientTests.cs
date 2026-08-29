@@ -21,6 +21,23 @@ namespace ComfyUILibsTests.Services
             => Task.FromResult(_handler(request));
     }
 
+    /// <summary>
+    /// リクエストを完了させず、渡された <see cref="CancellationToken"/> がキャンセルされるまで待機する
+    /// テスト用 HttpMessageHandler。サーバー無応答（ComfyUI ダウン）状態を再現する。
+    /// </summary>
+    internal class HangingHttpMessageHandler : HttpMessageHandler
+    {
+        public TaskCompletionSource<bool> RequestReceived { get; } = new();
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestReceived.TrySetResult(true);
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("到達しない");
+        }
+    }
+
     internal static class FakeHttpClientFactory
     {
         public static HttpClient Create(Func<HttpRequestMessage, HttpResponseMessage> handler)
@@ -69,6 +86,38 @@ namespace ComfyUILibsTests.Services
 
             await Assert.ThrowsAsync<ComfyUIException>(() =>
                 client.SubmitAsync(new JsonObject(), "client-1"));
+        }
+
+        // ── キャンセル ────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task SubmitAsync_CancelledMidRequest_ThrowsOperationCanceledNotComfyUIException()
+        {
+            var handler = new HangingHttpMessageHandler();
+            var client = new ComfyUIClient(BaseUrl, new HttpClient(handler));
+
+            using var cts = new CancellationTokenSource();
+            var task = client.SubmitAsync(new JsonObject(), "client-1", cts.Token);
+
+            Assert.True(await handler.RequestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+            cts.Cancel();
+
+            // 明示的キャンセルは ComfyUIException（接続失敗・タイムアウト）に変換されずそのまま伝播する
+            var ex = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+            Assert.IsNotType<ComfyUIException>(ex);
+        }
+
+        [Fact]
+        public async Task GetOutputsAsync_TokenAlreadyCancelled_ThrowsOperationCanceled()
+        {
+            var http = FakeHttpClientFactory.CreateJson("{}");
+            var client = new ComfyUIClient(BaseUrl, http);
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.GetOutputsAsync("abc-123", cts.Token));
         }
 
         // ── UploadImageAsync ──────────────────────────────────────────────────

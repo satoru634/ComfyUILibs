@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using ComfyUILibs.Exceptions;
 using ComfyUILibs.Models;
 using ComfyUILibs.Services;
@@ -21,15 +22,20 @@ namespace ComfyUILibsTests.Services
         /// <summary>直近の SubmitAsync 呼び出しで受け取ったワークフロー（送信内容の検証用）。</summary>
         public JsonObject? LastSubmittedWorkflow { get; private set; }
 
-        public Task<string> SubmitAsync(JsonObject workflow, string clientId)
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             LastSubmittedWorkflow = workflow;
             if (ThrowOnSubmit != null)
                 throw ThrowOnSubmit;
             return Task.FromResult(PromptId);
         }
 
-        public Task MonitorAsync(string promptId, string clientId) => Task.CompletedTask;
+        public Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
 
         public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
             => Task.FromResult("uploaded.png");
@@ -37,13 +43,46 @@ namespace ComfyUILibsTests.Services
         public Task<System.Text.Json.JsonElement> GetHistoryAsync(string promptId)
             => Task.FromResult(JsonDocument.Parse("{}").RootElement);
 
-        public Task<List<OutputFile>> GetOutputsAsync(string promptId)
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             GetOutputsCallCount++;
             if (OutputsSequence != null && OutputsSequence.Count > 0)
                 return Task.FromResult(OutputsSequence.Dequeue());
             return Task.FromResult(Outputs);
         }
+
+        public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
+            => Task.FromResult(Array.Empty<byte>());
+    }
+
+    /// <summary>
+    /// <see cref="IComfyUIClient.MonitorAsync"/> が完了イベントを受け取れず、
+    /// キャンセルされるまで待ち続ける状況（ComfyUI サーバーダウン）を再現するモック。
+    /// </summary>
+    internal class BlockingMonitorClient : IComfyUIClient
+    {
+        /// <summary>MonitorAsync の待機に入った時点で完了する。</summary>
+        public TaskCompletionSource<bool> MonitorEntered { get; } = new();
+
+        public Task<string> SubmitAsync(JsonObject workflow, string clientId, CancellationToken cancellationToken = default)
+            => Task.FromResult("blocking-prompt-id");
+
+        public async Task MonitorAsync(string promptId, string clientId, CancellationToken cancellationToken = default)
+        {
+            MonitorEntered.TrySetResult(true);
+            // トークンがキャンセルされると OperationCanceledException を送出する
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+
+        public Task<string> UploadImageAsync(byte[] imageData, string filename = "image.png")
+            => Task.FromResult("uploaded.png");
+
+        public Task<System.Text.Json.JsonElement> GetHistoryAsync(string promptId)
+            => Task.FromResult(JsonDocument.Parse("{}").RootElement);
+
+        public Task<List<OutputFile>> GetOutputsAsync(string promptId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new List<OutputFile>());
 
         public Task<byte[]> GetImageAsync(string filename, string subfolder, string type)
             => Task.FromResult(Array.Empty<byte>());
@@ -259,6 +298,49 @@ namespace ComfyUILibsTests.Services
             Assert.Empty(outputs);
             // 初回 + リトライ3回 = 4回
             Assert.Equal(4, fakeClient.GetOutputsCallCount);
+        }
+
+        // ── ExecuteAsync: キャンセル ─────────────────────────────────────────
+
+        [Fact]
+        public async Task ExecuteAsync_TokenAlreadyCancelled_ThrowsOperationCanceled()
+        {
+            var fakeClient = new FakeComfyUIClient();
+            var runner = CreateRunner(fakeClient);
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                runner.ExecuteAsync(
+                    new List<string>(),
+                    new PromptPair { Positive = "pos", Negative = "neg" },
+                    cancellationToken: cts.Token));
+
+            // 送信前にキャンセルされるため PromptId は更新されない
+            Assert.Null(runner.PromptId);
+            Assert.Equal(0, fakeClient.GetOutputsCallCount);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_CancelledWhileMonitoring_ThrowsOperationCanceled()
+        {
+            // MonitorAsync が完了イベントを受け取れないまま待ち続ける状況（ComfyUI ダウン）を再現する
+            var blockingClient = new BlockingMonitorClient();
+            var runner = CreateRunner(blockingClient);
+
+            using var cts = new CancellationTokenSource();
+            var task = runner.ExecuteAsync(
+                new List<string>(),
+                new PromptPair { Positive = "pos", Negative = "neg" },
+                cancellationToken: cts.Token);
+
+            // 監視待ちに入ったことを確認してからキャンセルする
+            Assert.True(await blockingClient.MonitorEntered.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+            cts.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+            Assert.Null(runner.PromptId);
         }
 
         // ── ExecuteAsync: filenamePrefix ─────────────────────────────────────

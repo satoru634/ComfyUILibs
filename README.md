@@ -164,6 +164,13 @@ var outputs = await runner.ExecuteAsync(loras, prompts, imageSize);
 // null または空白のみの場合はテンプレートに記述された値をそのまま使用する。
 var outputsWithPrefix = await runner.ExecuteAsync(loras, prompts, imageSize, filenamePrefix: "my_batch");
 
+// CancellationToken を渡すと ComfyUI への送信・完了監視・結果取得の各待機を中断できる。
+// ComfyUI サーバーがダウンして完了イベントも切断も検出できないまま待ち続ける状況でも、
+// トークンをキャンセルすれば即座に OperationCanceledException で抜けられる
+// （接続失敗・タイムアウトの ComfyUIException には変換されない）。
+using var cts = new CancellationTokenSource();
+var outputsCancelable = await runner.ExecuteAsync(loras, prompts, imageSize, cancellationToken: cts.Token);
+
 // 実行後のメタ情報
 Console.WriteLine(runner.PromptId);    // ComfyUI の prompt_id
 Console.WriteLine(runner.TemplatePath); // 使用したテンプレートのパス
@@ -351,9 +358,9 @@ dotnet test ComfyUILibs.sln
 | `Common/SettingTests.cs` | 9 | 設定の永続化・読み込み |
 | `Exceptions/ComfyUIExceptionTests.cs` | 3 | ComfyUIException の構築・継承 |
 | `Services/ConfigLoaderTests.cs` | 48 | 正常系・異常系のバリデーション（WdV3TimmTaggerRunner はモデル名マッピングのみ検証、wdv3_timm セクション自体は廃止） |
-| `Services/ComfyUIClientTests.cs` | 13 | FakeHttpMessageHandler によるモック（GetImageAsync 含む） |
+| `Services/ComfyUIClientTests.cs` | 15 | FakeHttpMessageHandler によるモック（GetImageAsync・キャンセル伝播を含む） |
 | `Services/WorkflowBuilderTests.cs` | 20 | テンプレート選択・適用（filename_prefix 上書きを含む） |
-| `Services/WorkflowRunnerTests.cs` | 13 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播を含む） |
+| `Services/WorkflowRunnerTests.cs` | 15 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播・キャンセルを含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
 | `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・起動引数（WdV3TimmPaths.ExeFilePath 固定）・一時ファイル・応答解釈・タグのアンダースコア→半角スペース正規化（顔文字系タグは保持）・DisposeAsync） |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model の対応表の変換・一覧取得・大文字小文字無視・未知モデル名の挙動 |
@@ -362,7 +369,7 @@ dotnet test ComfyUILibs.sln
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **229 件**
+合計: **233 件**
 
 ---
 

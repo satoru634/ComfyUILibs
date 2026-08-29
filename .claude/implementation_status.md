@@ -175,6 +175,19 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - `dotnet build ComfyUICaptioningTool.sln`（利用側）成功を確認済み
 - 本フェーズは実装完了時点でコミットしていない（フェーズ8以降ユーザー指示「実装完了後はコミットしないでください」が継続適用されているため、それに合わせた）
 
+## フェーズ10: ワークフロー実行の CancellationToken 対応（`fix/cancellation-token` ブランチ、実装完了）
+
+利用側プロジェクト [ComfyUIRunWorkflow](https://github.com/satoru634/ComfyUIRunWorkflow) の QueuePage で、ジョブ実行中に接続先 ComfyUI がダウンすると「中断」ボタンを押しても処理を停止できない不具合への対応。ワークフロー実行の全経路に `CancellationToken` を通し、実行中の ComfyUI 通信待ちごとキャンセルできるようにした。
+
+- **原因（ComfyUILibs 側）**: `ComfyUIClient.MonitorWebSocketAsync` の受信ループは、ローカル2秒タイムアウト（`wsTimeout`）で `OperationCanceledException` を捕捉すると `IsCompletedAsync` を確認して `continue` する。サーバーダウン中は HTTP も失敗して `false` を返し続けるため、**全体タイムアウトが無く無限ループ**になる。`WebSocketException`（接続断）経由でも `PollUntilCompletedAsync`（`timeoutSeconds`＝600 = 10分）に落ちるまで戻らない。いずれも `ExecuteAsync` が長時間ブロックし、外部からの中断手段が無かった
+- [x] `Services/IComfyUIClient.cs` / `ComfyUIClient.cs` — `SubmitAsync`・`MonitorAsync`・`GetOutputsAsync` に `CancellationToken cancellationToken = default` 引数を追加。HTTP 呼び出し（`GetAsync`/`PostAsync`/`ReadAsStringAsync`）・`ws.ConnectAsync`・`Task.Delay`・WebSocket 受信の各待機へトークンを伝播。受信ループの2秒タイムアウト用 CTS は `CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)` ＋ `CancelAfter` で外部トークンと連結し、ループ先頭で `ThrowIfCancellationRequested()` を呼ぶ
+- [x] `SendAsync` ヘルパー — 呼び出し側からの明示的キャンセル（`cancellationToken.IsCancellationRequested`）は `OperationCanceledException` のまま伝播させ、`HttpClient.Timeout` による `TaskCanceledException`（接続タイムアウト）とは区別して `ComfyUIException` に変換しない。`IsCompletedAsync` の握りつぶし `catch` も、明示的キャンセル時のみ再スローするよう修正
+- [x] `Services/WorkflowRunner.cs` — `ExecuteAsync` に `CancellationToken cancellationToken = default` 引数を追加し、`SubmitAsync`／`MonitorAsync`／`GetOutputsAsync`／`Task.Delay`（outputs 空リトライ）へ橋渡し
+- [x] `ComfyUILibsTests/Services/ComfyUIClientTests.cs` — `HangingHttpMessageHandler`（トークンがキャンセルされるまで応答しないハンドラー）を追加。`SubmitAsync` の実行中キャンセルが `ComfyUIException` ではなく `OperationCanceledException` で抜けること・`GetOutputsAsync` にキャンセル済みトークンを渡すと `OperationCanceledException` になることを検証（2件追加、計15件）
+- [x] `ComfyUILibsTests/Services/WorkflowRunnerTests.cs` — `BlockingMonitorClient`（`MonitorAsync` がキャンセルまで待ち続けるモック）を追加。キャンセル済みトークンで即 `OperationCanceledException`・監視待ち中のキャンセルで `OperationCanceledException`（`PromptId` は未更新）を検証（2件追加、計15件）
+- [x] 既存テストのフェイククライアント（`FakeComfyUIClient`・`FakeTaggerClient` 系・`FakeImageClient`）のインターフェース実装シグネチャを新引数に追従
+- [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新。全件パス確認済み（合計233件）
+
 ## テスト（ComfyUILibsTests）
 
 各クラスに対応するテストを `ComfyUILibsTests/<同じ名前空間>/` に配置済み。件数の内訳は `README.md` の「テスト」セクション参照（全パス）。
