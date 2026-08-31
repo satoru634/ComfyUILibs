@@ -132,4 +132,8 @@
   <!-- WorkflowRunner -->
   <data name="WorkflowRunner_WorkflowNotFound_Format" xml:space="preserve"><value>ワークフロー '{0}' が workflow_config.json の workflows に存在しません</value></data>
   <data name="WorkflowRunner_LoraNotFound_Format" xml:space="preserve"><value>LoRA '{0}' が workflow_config.json の loras 設定に存在しません</value></data>
+
+  <!-- ImageMetadataReader -->
+  <data name="ImageMetadataReader_FileNotFound_Format" xml:space="preserve"><value>画像ファイルが見つかりません: {0}</value></data>
+  <data name="ImageMetadataReader_ReadFailed_Format" xml:space="preserve"><value>画像メタデータの読み取りに失敗しました: {0}</value></data>
 </root>

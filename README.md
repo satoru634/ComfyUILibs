@@ -15,6 +15,8 @@ ComfyUI のワークフロー実行・WebSocket 監視・設定管理などの�
 | workflow_config.json の読み込み・バリデーション | `ConfigLoader` |
 | テンプレート選択・プロンプト/LoRA/サイズ適用 | `WorkflowBuilder` |
 | ComfyUI REST API / WebSocket クライアント | `ComfyUIClient` |
+| 画像埋め込みメタデータ（ComfyUI prompt/workflow・A1111 parameters）の読み取り | `ImageMetadataReader` |
+| プロンプト文字列 → 正規化タグ列 の変換 | `PromptTagExtractor` |
 | WD14 Tagger ワークフロー実行（ComfyUI 経由） | `Wd14TaggerRunner` |
 | wdv3-timm 常駐プロセス経由のタグ付け実行（ComfyUI 不要） | `WdV3TimmTaggerRunner` |
 | 画像 1 枚のタグ付けランナー抽象化 | `ITaggerRunner`（`Wd14TaggerRunner`/`WdV3TimmTaggerRunner` が実装） |
@@ -58,12 +60,17 @@ ComfyUILibs/
     ResolvedLora.cs           # LoRA 解決済みエントリ
     TagResult.cs              # WD14 Tagger 実行結果モデル
     CaptioningProgress.cs     # CaptioningService の進捗通知モデル（CaptioningResult 列挙体を含む）
+    ComfyImageMetadata.cs     # 画像埋め込みメタデータの抽出結果モデル（ComfyMetadataParseStatus / ComfyLoraRef を含む）
   Services/
     IComfyUIClient.cs         # ComfyUIClient インターフェース（DI / テスト用）
     ComfyUIClient.cs          # ComfyUI REST API + WebSocket クライアント（GET /view による画像取得を含む）
     ConfigLoader.cs           # workflow_config.json 読み込み・バリデーション
     WorkflowBuilder.cs        # テンプレート選択・書き換え
     WorkflowRunner.cs         # ワークフロー実行ファサード
+    IImageMetadataReader.cs   # PNG 埋め込みメタデータ読み取りの抽象（DI / テスト用）
+    ImageMetadataReader.cs    # PNG チャンクを直接走査し ComfyUI prompt / A1111 parameters を解析
+    IPromptTagExtractor.cs    # プロンプト文字列 → 正規化タグ列 変換の抽象（DI / テスト用）
+    PromptTagExtractor.cs     # <lora:...> 除去・重み記法剥がし・BREAK 除去・重複排除でタグ化
     ITaggerRunner.cs          # 画像 1 枚のタグ付けランナー抽象化（Wd14TaggerRunner/WdV3TimmTaggerRunner が実装）
     Wd14TaggerRunner.cs       # WD14 Tagger ワークフロー実行（ComfyUI 経由）
     IWdV3TimmProcessClient.cs # wdv3-timm 常駐サーバープロセスとの標準入出力通信の抽象化（DI / テスト用）
@@ -196,6 +203,32 @@ await runner.RunAsync("input.json", "result.json");
   "image_size": { "width": 832, "height": 1216 }
 }
 ```
+
+### 画像メタデータの読み取り・タグ抽出
+
+```csharp
+// ImageMetadataReader — PNG の tEXt/iTXt/zTXt チャンクを直接走査し、
+// ComfyUI の prompt（API 形式）を優先解析する。prompt が無ければ A1111 形式の
+// parameters チャンクをフォールバック解析する。
+IImageMetadataReader reader = new ImageMetadataReader();
+ComfyImageMetadata meta = reader.Read("output/ComfyUI_00123_.png");
+
+Console.WriteLine(meta.ParseStatus);      // Ok / Partial / None
+Console.WriteLine(meta.PositivePrompt);   // "masterpiece, 1girl, solo, ..."
+Console.WriteLine(meta.NegativePrompt);
+Console.WriteLine($"{meta.ModelName} {meta.Sampler}/{meta.Scheduler} steps={meta.Steps} cfg={meta.Cfg} seed={meta.Seed}");
+foreach (var lora in meta.Loras)
+    Console.WriteLine($"{lora.Name} ({lora.StrengthModel}/{lora.StrengthClip})");
+
+// PromptTagExtractor — ポジティブプロンプト等をギャラリー絞り込み用の正規化タグ列へ
+IPromptTagExtractor extractor = new PromptTagExtractor();
+IReadOnlyList<string> tags = extractor.ExtractTags(meta.PositivePrompt);
+// "(best quality:1.2), 1girl, <lora:foo:0.8>, ((detailed))" → ["best quality", "1girl", "detailed"]
+```
+
+- `KSampler` 系ノードの `positive` / `negative` 入力（`SamplerCustomAdvanced` の `guider` 経由も対応）を辿って `CLIPTextEncode` 系から本文を取得する。リンクを辿り切れない構成では全 `CLIPTextEncode` の `text` を連結してポジ扱いとし `ParseStatus = Partial` を返す
+- メタデータが皆無なら `None`。ファイル不存在・ファイル読み取り自体の失敗のみ `ComfyUIException` を送出する（構造が想定外なだけなら例外にせず `Partial` / `None`）
+- `PromptTagExtractor` は `<lora:...>` 等を除去（LoRA はタグにしない）、`(tag:1.2)` / `(tag)` / `[tag]` を再帰的に剥がす（エスケープ `\(` は囲みとみなさない）、`BREAK` を除去、大文字小文字を無視して重複排除（初出の表記を採用）。`embedding:xxx` は保持する
 
 ### WD14 Tagger（ComfyUI 経由）
 
@@ -362,6 +395,8 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowBuilderTests.cs` | 20 | テンプレート選択・適用（filename_prefix 上書きを含む） |
 | `Services/WorkflowRunnerTests.cs` | 15 | FakeComfyUIClient によるモック（outputs 空リトライ・filenamePrefix 伝播・キャンセルを含む） |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | タグ取得フロー・PrependTags/ExcludeTags・タグ取得リトライ |
+| `Services/PromptTagExtractorTests.cs` | 16 | カンマ分割・重み記法/ネスト強調の剥がし・LoRA 除去・embedding 保持・BREAK 除去・大文字小文字無視の重複排除・エスケープ括弧・空白畳み込み |
+| `Services/ImageMetadataReaderTests.cs` | 13 | tEXt チャンク付き PNG をヘルパー生成して検証。標準 t2i・LoRA 収集・リンク先 Primitive ノード解決・noise_seed・PNG 実寸フォールバック・カスタムサンプラー時の Partial・workflow のみ・メタ無し None・A1111 parameters・prompt 優先・ファイル不存在の例外・非 PNG |
 | `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | FakeWdV3TimmProcessClient によるモック（設定バリデーション・遅延プロセス起動・起動引数（WdV3TimmPaths.ExeFilePath 固定）・一時ファイル・応答解釈・タグのアンダースコア→半角スペース正規化（顔文字系タグは保持）・DisposeAsync） |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model の対応表の変換・一覧取得・大文字小文字無視・未知モデル名の挙動 |
 | `Services/CaptioningServiceTests.cs` | 14 | タグフィルタ・ディレクトリ一括処理（再帰/上書き/エラー継続/進捗通知）・タグ集計レポート・ITaggerRunner 抽象の直接実装との組み合わせ |
@@ -369,7 +404,7 @@ dotnet test ComfyUILibs.sln
 | `Models/TagResultTests.cs` | 3 | デフォルト値・シリアライズ/デシリアライズ |
 | `Resources/MessagesTests.cs` | 6 | ja/en/en-US でのメッセージ解決・書式指定・未知キーの挙動 |
 
-合計: **233 件**
+合計: **261 件**
 
 ---
 

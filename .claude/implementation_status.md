@@ -188,6 +188,21 @@ ComfyUILibs は Python 版 [comfyui_tools](https://github.com/satoru634/comfyui_
 - [x] 既存テストのフェイククライアント（`FakeComfyUIClient`・`FakeTaggerClient` 系・`FakeImageClient`）のインターフェース実装シグネチャを新引数に追従
 - [x] `README.md`/`doc/README_english.md`/`doc/class_diagram.md` を更新。全件パス確認済み（合計233件）
 
+## フェーズ11: 画像埋め込みメタデータ読み取り（`feature/image-metadata-reader` ブランチ、実装完了）
+
+新規利用側プロジェクト [ComfyUISharpGallery](https://github.com/satoru634/ComfyUISharpGallery)（ComfyUI 生成画像のギャラリー／タグ管理アプリ）の実装ロードマップ P1-A に対応。画像に埋め込まれた ComfyUI ワークフロー情報からプロンプト・生成パラメータを取り出す UI 非依存ロジックを本ライブラリに新設した。仕様は利用側リポジトリの `.claude/spec_gallery.md` を参照。
+
+- [x] `Models/ComfyImageMetadata.cs`（新設） — 抽出結果モデル。`ComfyMetadataParseStatus`（`Ok`/`Partial`/`None`）列挙体、`ComfyLoraRef`（`Name`/`StrengthModel`/`StrengthClip`）、`ComfyImageMetadata`（ポジ／ネガ・model／sampler／scheduler／steps／cfg／seed／denoise・width／height・`Loras`・生 `prompt`／`workflow` JSON・`ParseStatus`）
+- [x] `Services/IPromptTagExtractor.cs` / `PromptTagExtractor.cs`（新設） — プロンプト文字列 → 正規化タグ列。`<lora:...>` 等のアングルブラケット記法除去 → カンマ分割 → `BREAK` 除去 → 要素全体を囲む重み記法 `(tag:1.2)`／`(tag)`／`[tag]` の再帰剥がし（エスケープ `\(` は囲みとみなさない）→ 連続空白の畳み込み＋エスケープ復元 → 大文字小文字無視の重複排除（初出表記を採用）。`embedding:xxx` は保持
+- [x] `Services/IImageMetadataReader.cs` / `ImageMetadataReader.cs`（新設） — PNG のチャンク構造を直接走査して `tEXt`／`iTXt`（UTF-8・zlib 対応）／`zTXt`（zlib）を取り出す。`ComfyUI` の `prompt`（API 形式ノードグラフ）を優先解析し、`KSampler` 系ノードの `positive`／`negative` 入力（`SamplerCustomAdvanced` の `guider` 経由も対応）を辿って `CLIPTextEncode` 系（`text`／`text_g`／リンク先の Primitive/Note ノード、`ConditioningCombine` 等の上流リンクも 1 段ずつ）から本文を取得。checkpoint／UNET ローダから model 名、`EmptyLatentImage` から解像度、`LoraLoader` 系から LoRA を収集。`prompt` が無ければ A1111 形式の `parameters` テキストチャンクをフォールバック解析（`Negative prompt:` と `Steps:` 行で分割し、`Steps`/`Sampler`/`CFG scale`/`Seed`/`Size`/`Model`/`Denoising strength` を正規表現で抽出）。リンクを辿り切れない場合は全 `CLIPTextEncode` の `text` を連結してポジ扱いとし `Partial`。メタデータが皆無なら `None`。ファイル不存在・読み取り失敗のみ `ComfyUIException` を送出
+- [x] `Resources/Messages.resx`／`Messages.en.resx` — `ImageMetadataReader_FileNotFound_Format`／`ImageMetadataReader_ReadFailed_Format` を追加
+- [x] `ComfyUILibsTests/Services/PromptTagExtractorTests.cs`（16件）— null／空、カンマ分割、重み記法、ネスト強調、LoRA 除去、`embedding:` 保持、`BREAK` 除去、大文字小文字無視の重複排除、エスケープ括弧、空白畳み込み
+- [x] `ComfyUILibsTests/Services/ImageMetadataReaderTests.cs`（13件）— `tEXt` チャンク付き PNG をテスト内ヘルパーで生成（CRC はダミー）。標準 t2i／LoRA あり／リンク先 Primitive ノード解決／`KSamplerAdvanced` の `noise_seed`／`EmptyLatentImage` 無し時の PNG 実寸フォールバック／カスタムサンプラー時の `Partial`／`workflow` チャンクのみ／メタデータ無し `None`／A1111 `parameters`／`prompt` 優先／ファイル不存在の例外／非 PNG
+- [x] 全 261 件パス確認済み（`ComfyUILibsTests.exe` 直接実行。233件 → 261件）
+- [x] `README.md`／`doc/README_english.md`／`doc/class_diagram.md`／`.claude/directory_structure.md`／本ファイルを更新
+- **スコープ外**: SQLite インデックス・サムネイル生成・ディレクトリスキャンは利用側（ComfyUISharpGallery）の本体プロジェクトに実装する（UI 非依存だが利用側固有のためライブラリには置かない、という利用側の設計判断による）
+- 実装完了時点でコミットしていない（利用側の指示に合わせる）
+
 ## テスト（ComfyUILibsTests）
 
 各クラスに対応するテストを `ComfyUILibsTests/<同じ名前空間>/` に配置済み。件数の内訳は `README.md` の「テスト」セクション参照（全パス）。

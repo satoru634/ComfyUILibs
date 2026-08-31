@@ -15,6 +15,8 @@ This is a C# port of the Python implementation from [comfyui_tools](https://gith
 | Loads and validates workflow_config.json | `ConfigLoader` |
 | Selects templates and applies prompts / LoRA / image size | `WorkflowBuilder` |
 | ComfyUI REST API and WebSocket client | `ComfyUIClient` |
+| Reads image-embedded metadata (ComfyUI prompt/workflow, A1111 parameters) | `ImageMetadataReader` |
+| Converts a prompt string into a normalized tag list | `PromptTagExtractor` |
 | Runs WD14 Tagger workflows (via ComfyUI) | `Wd14TaggerRunner` |
 | Runs tagging via a local wdv3-timm persistent process (no ComfyUI required) | `WdV3TimmTaggerRunner` |
 | Abstracts a single-image tagging runner | `ITaggerRunner` (implemented by `Wd14TaggerRunner`/`WdV3TimmTaggerRunner`) |
@@ -58,12 +60,17 @@ ComfyUILibs/
     ResolvedLora.cs           # Resolved LoRA entry
     TagResult.cs              # WD14 Tagger execution result model
     CaptioningProgress.cs     # Progress notification model for CaptioningService (includes the CaptioningResult enum)
+    ComfyImageMetadata.cs     # Extraction result model for image-embedded metadata (includes ComfyMetadataParseStatus / ComfyLoraRef)
   Services/
     IComfyUIClient.cs         # ComfyUIClient interface (for DI / testing)
     ComfyUIClient.cs          # ComfyUI REST API + WebSocket client (includes image fetch via GET /view)
     ConfigLoader.cs           # workflow_config.json loading and validation
     WorkflowBuilder.cs        # Template selection and patching
     WorkflowRunner.cs         # Workflow execution facade
+    IImageMetadataReader.cs   # Abstraction for reading PNG-embedded metadata (for DI / testing)
+    ImageMetadataReader.cs    # Scans PNG chunks directly, parsing ComfyUI prompt / A1111 parameters
+    IPromptTagExtractor.cs    # Abstraction for prompt string -> normalized tag list (for DI / testing)
+    PromptTagExtractor.cs     # Tagizes by stripping <lora:...>, weight syntax, BREAK, and de-duplicating
     ITaggerRunner.cs          # Abstracts a single-image tagging runner (implemented by Wd14TaggerRunner/WdV3TimmTaggerRunner)
     Wd14TaggerRunner.cs       # WD14 Tagger workflow execution (via ComfyUI)
     IWdV3TimmProcessClient.cs # Abstracts stdin/stdout communication with the wdv3-timm persistent process (for DI / testing)
@@ -194,6 +201,30 @@ await runner.RunAsync("input.json", "result.json");
   "image_size": { "width": 832, "height": 1216 }
 }
 ```
+
+### Reading image metadata / extracting tags
+
+```csharp
+// ImageMetadataReader scans PNG tEXt/iTXt/zTXt chunks directly and parses the ComfyUI
+// prompt (API graph) first, falling back to the A1111 parameters chunk when there is no prompt.
+IImageMetadataReader reader = new ImageMetadataReader();
+ComfyImageMetadata meta = reader.Read("output/ComfyUI_00123_.png");
+
+Console.WriteLine(meta.ParseStatus);      // Ok / Partial / None
+Console.WriteLine(meta.PositivePrompt);
+Console.WriteLine($"{meta.ModelName} {meta.Sampler}/{meta.Scheduler} steps={meta.Steps} cfg={meta.Cfg} seed={meta.Seed}");
+foreach (var lora in meta.Loras)
+    Console.WriteLine($"{lora.Name} ({lora.StrengthModel}/{lora.StrengthClip})");
+
+// PromptTagExtractor turns a positive prompt into a normalized tag list for gallery filtering.
+IPromptTagExtractor extractor = new PromptTagExtractor();
+IReadOnlyList<string> tags = extractor.ExtractTags(meta.PositivePrompt);
+// "(best quality:1.2), 1girl, <lora:foo:0.8>, ((detailed))" -> ["best quality", "1girl", "detailed"]
+```
+
+- Follows the `positive` / `negative` inputs of `KSampler`-family nodes (including via a `guider` for `SamplerCustomAdvanced`) to read text from `CLIPTextEncode`-family nodes. When links cannot be fully resolved it joins every `CLIPTextEncode` text as the positive prompt and returns `ParseStatus = Partial`.
+- Returns `None` when there is no metadata at all. Only a missing file or a file read failure raises `ComfyUIException` (an unexpected graph shape yields `Partial` / `None`, not an exception).
+- `PromptTagExtractor` removes `<lora:...>`-style tokens (LoRA is not a tag), recursively strips `(tag:1.2)` / `(tag)` / `[tag]` (escaped `\(` is not treated as a wrapper), removes `BREAK`, and de-duplicates case-insensitively (keeping the first spelling). `embedding:xxx` is kept.
 
 ### WD14 Tagger (via ComfyUI)
 
@@ -361,6 +392,8 @@ dotnet test ComfyUILibs.sln
 | `Services/WorkflowBuilderTests.cs` | 20 | Template selection and patching (includes filename_prefix override) |
 | `Services/WorkflowRunnerTests.cs` | 15 | Mocked with FakeComfyUIClient (includes empty-outputs retry, filenamePrefix propagation, and cancellation) |
 | `Services/Wd14TaggerRunnerTests.cs` | 11 | Tag extraction flow, PrependTags/ExcludeTags, output retry |
+| `Services/PromptTagExtractorTests.cs` | 16 | Comma split, weight/nested-emphasis stripping, LoRA removal, embedding retention, BREAK removal, case-insensitive de-dup, escaped parentheses, whitespace collapsing |
+| `Services/ImageMetadataReaderTests.cs` | 13 | Verified with helper-built tEXt-chunk PNGs: standard t2i, LoRA collection, linked primitive-node resolution, noise_seed, PNG-dimension fallback, Partial for custom samplers, workflow-only chunk, None when no metadata, A1111 parameters, prompt precedence, missing-file exception, non-PNG |
 | `Services/WdV3TimmTaggerRunnerTests.cs` | 19 | Mocked with FakeWdV3TimmProcessClient (config validation, lazy process startup, launch arguments using the fixed WdV3TimmPaths.ExeFilePath, temp files, response handling, underscore-to-space tag normalization preserving emoticon tags, DisposeAsync) |
 | `Services/WdV3TimmModelMapTests.cs` | 9 | wd14_tagger.model_name ⇔ wdv3-timm --model mapping, listing supported names, case-insensitivity, unknown model names |
 | `Services/CaptioningServiceTests.cs` | 14 | Tag filtering, batch directory processing (recursive/overwrite/error continuation/progress), tag frequency reports, combined with a direct `ITaggerRunner` implementation |
@@ -368,7 +401,7 @@ dotnet test ComfyUILibs.sln
 | `Models/TagResultTests.cs` | 3 | Default values, serialization/deserialization |
 | `Resources/MessagesTests.cs` | 6 | Message resolution for ja/en/en-US, formatting, unknown-key behavior |
 
-Total: **233 tests**
+Total: **261 tests**
 
 ---
 
