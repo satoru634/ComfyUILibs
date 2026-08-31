@@ -30,6 +30,11 @@ ComfyUILibs/                            <- リポジトリルート
       ResolvedLora.cs                    <- LoRA 解決済みエントリ
       TagResult.cs                       <- WD14 Tagger 実行結果モデル（tag_result_*.json 用）
       CaptioningProgress.cs              <- CaptioningService の進捗通知モデル（CaptioningResult 列挙体を含む）
+      ComfyImageMetadata.cs             <- 画像埋め込みメタデータの抽出結果モデル（フェーズ11で新設）。
+                                             ComfyMetadataParseStatus（Ok/Partial/None）列挙体・
+                                             ComfyLoraRef（Name/StrengthModel/StrengthClip）・
+                                             ComfyImageMetadata（ポジ/ネガ・生成パラメータ・解像度・
+                                             Loras・生 prompt/workflow JSON・ParseStatus）を含む
     Services/                            <- ComfyUI API 通信・ワークフロー制御ロジック
       IComfyUIClient.cs                  <- ComfyUIClient インターフェース（DI / テスト用、GetImageAsync を含む）
       ComfyUIClient.cs                   <- comfyui_client.py の移植（GET /view による画像取得を含む）
@@ -91,6 +96,21 @@ ComfyUILibs/                            <- リポジトリルート
                                              （wdv3-timm 専用ロード、comfyui_url 不要）を含む
       IPreviewImageCacheService.cs       <- プレビュー画像キャッシュのインターフェース（DI / テスト用）
       PreviewImageCacheService.cs        <- 生成画像プレビューのローカルキャッシュ管理（GET /view 結果をファイルキャッシュ）
+      IPromptTagExtractor.cs            <- プロンプト文字列 → 正規化タグ列 変換の抽象（フェーズ11で新設）
+      PromptTagExtractor.cs             <- IPromptTagExtractor の既定実装。<lora:...> 除去・カンマ分割・
+                                             BREAK 除去・重み記法 (tag:1.2)/(tag)/[tag] の再帰剥がし
+                                             （エスケープ \( は囲みとみなさない）・空白畳み込み＋エスケープ復元・
+                                             大文字小文字無視の重複排除（初出表記を採用）。embedding:xxx は保持
+      IImageMetadataReader.cs           <- PNG 埋め込みメタデータ読み取りの抽象（フェーズ11で新設）
+      ImageMetadataReader.cs            <- IImageMetadataReader の既定実装。PNG チャンク（tEXt/iTXt/zTXt）を
+                                             直接走査し、ComfyUI の prompt（API 形式）を優先解析。KSampler 系の
+                                             positive/negative（SamplerCustomAdvanced の guider 経由も）を辿って
+                                             CLIPTextEncode 系から本文を取得。checkpoint/UNET ローダから model 名、
+                                             EmptyLatentImage から解像度、LoraLoader 系から LoRA を収集。prompt が
+                                             無ければ A1111 形式 parameters チャンクをフォールバック解析。
+                                             辿り切れない場合は全 CLIPTextEncode の text を連結して Partial、
+                                             メタデータ皆無なら None。ファイル不存在・読み取り失敗のみ
+                                             ComfyUIException を送出
     Properties/
       AssemblyInfo.cs                    <- InternalsVisibleTo("ComfyUILibsTests") を宣言
   ComfyUILibsTests/                      <- xUnit テストプロジェクト
@@ -113,6 +133,9 @@ ComfyUILibs/                            <- リポジトリルート
       ComfyUIClientTests.cs
       WorkflowBuilderTests.cs
       WorkflowRunnerTests.cs
+      PromptTagExtractorTests.cs          <- PromptTagExtractor のテスト（フェーズ11で新設、16件）
+      ImageMetadataReaderTests.cs         <- ImageMetadataReader のテスト（フェーズ11で新設、13件。
+                                             tEXt チャンク付き PNG をテスト内ヘルパーで生成して検証）
       Wd14TaggerRunnerTests.cs
       WdV3TimmTaggerRunnerTests.cs        <- WdV3TimmTaggerRunner のテスト（FakeWdV3TimmProcessClient による
                                              モック。設定バリデーション・PrependTags/ExcludeTags・初回呼び出し時の

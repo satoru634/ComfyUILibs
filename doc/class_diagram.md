@@ -171,6 +171,37 @@ classDiagram
         +string? ErrorMessage
     }
 
+    class ComfyMetadataParseStatus {
+        <<enumeration>>
+        Ok
+        Partial
+        None
+    }
+
+    class ComfyLoraRef {
+        +string Name
+        +double? StrengthModel
+        +double? StrengthClip
+    }
+
+    class ComfyImageMetadata {
+        +string? PositivePrompt
+        +string? NegativePrompt
+        +string? ModelName
+        +string? Sampler
+        +string? Scheduler
+        +int? Steps
+        +double? Cfg
+        +long? Seed
+        +double? Denoise
+        +int? Width
+        +int? Height
+        +IReadOnlyList~ComfyLoraRef~ Loras
+        +string? RawPromptJson
+        +string? RawWorkflowJson
+        +ComfyMetadataParseStatus ParseStatus
+    }
+
     %% ----- Services -----
 
     class IComfyUIClient {
@@ -219,6 +250,24 @@ classDiagram
         +LoadAndValidateInput(string) WorkflowInput
         +ValidateInputs(List~string~, PromptPair, ImageSize?) void
         +ValidateWd14TaggerConfig(WorkflowConfig) void
+    }
+
+    class IImageMetadataReader {
+        <<interface>>
+        +Read(string) ComfyImageMetadata
+    }
+
+    class ImageMetadataReader {
+        +Read(string) ComfyImageMetadata
+    }
+
+    class IPromptTagExtractor {
+        <<interface>>
+        +ExtractTags(string?) IReadOnlyList~string~
+    }
+
+    class PromptTagExtractor {
+        +ExtractTags(string?) IReadOnlyList~string~
     }
 
     class ITaggerRunner {
@@ -300,6 +349,8 @@ classDiagram
     Exception <|-- ComfyUIException
     IComfyUIClient <|.. ComfyUIClient
     IPreviewImageCacheService <|.. PreviewImageCacheService
+    IImageMetadataReader <|.. ImageMetadataReader
+    IPromptTagExtractor <|.. PromptTagExtractor
     ITaggerRunner <|.. Wd14TaggerRunner
     ITaggerRunner <|.. WdV3TimmTaggerRunner
     IWdV3TimmProcessClient <|.. WdV3TimmProcessClient
@@ -348,6 +399,11 @@ classDiagram
     CaptioningService ..> CaptioningProgress : reports
     CaptioningService --> Messages : uses
     CaptioningProgress "1" *-- "1" CaptioningResult : result
+
+    ImageMetadataReader ..> ComfyImageMetadata : returns
+    ImageMetadataReader --> Messages : uses
+    ComfyImageMetadata "1" *-- "*" ComfyLoraRef : loras
+    ComfyImageMetadata "1" *-- "1" ComfyMetadataParseStatus : parseStatus
 
     PreviewImageCacheService --> IComfyUIClient : uses
     PreviewImageCacheService ..> OutputFile : uses
